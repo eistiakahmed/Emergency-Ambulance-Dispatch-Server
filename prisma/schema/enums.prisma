@@ -1,0 +1,78 @@
+// ==============================================================================
+// Global System Enums
+// ==============================================================================
+
+// Fixed primary user roles
+enum Role {
+  PATIENT
+  DRIVER
+  ADMIN
+}
+
+// Driver availability & shift status
+enum DriverStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+// Ambulance vehicle classification
+enum VehicleType {
+  BASIC_LIFE_SUPPORT
+  ADVANCED_LIFE_SUPPORT
+  PATIENT_TRANSPORT
+  NEONATAL
+}
+
+// Emergency severity & urgency priority
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+// Emergency request lifecycle status
+enum EmergencyStatus {
+  PENDING
+  DISPATCHED
+  COMPLETED
+  CANCELLED
+}
+
+// Trip dispatch state machine milestones
+enum TripStatus {
+  ASSIGNED
+  EN_ROUTE_PICKUP
+  PATIENT_PICKED_UP
+  EN_ROUTE_HOSPITAL
+  ARRIVED_HOSPITAL
+  COMPLETED
+  CANCELLED
+}
+
+// Payment transaction status
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+// Supported digital payment gateways
+enum PaymentProvider {
+  STRIPE
+  BKASH
+  SSLCOMMERZ
+}
+
+// System audit log action categories
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+  DISPATCH
+  PAYMENT
+}

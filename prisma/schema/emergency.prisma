@@ -1,0 +1,27 @@
+model EmergencyRequest {
+  id                    String          @id @default(uuid())
+  patientId             String
+  patient               User            @relation(fields: [patientId], references: [id])
+  patientName           String
+  patientPhone          String
+  priority              Priority        @default(MEDIUM)
+  pickupAddress         String
+  pickupLatitude        Float
+  pickupLongitude       Float
+  symptoms              String
+  notes                 String?
+  status                EmergencyStatus @default(PENDING)
+  destinationHospitalId String?
+  destinationHospital   Hospital?       @relation(fields: [destinationHospitalId], references: [id], onDelete: SetNull)
+  deletedAt             DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  trip Trip?
+
+  @@index([status])
+  @@index([priority])
+  @@index([patientId])
+  @@index([deletedAt])
+  @@map("emergency_requests")
+}

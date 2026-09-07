@@ -1,0 +1,45 @@
+model Trip {
+  id                 String           @id @default(uuid())
+  emergencyRequestId String           @unique
+  emergencyRequest   EmergencyRequest @relation(fields: [emergencyRequestId], references: [id])
+  ambulanceId        String
+  ambulance          Ambulance        @relation(fields: [ambulanceId], references: [id])
+  driverProfileId    String
+  driverProfile      DriverProfile    @relation(fields: [driverProfileId], references: [id])
+  hospitalId         String?
+  hospital           Hospital?        @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+  status             TripStatus       @default(ASSIGNED)
+  baseFare           Decimal          @default(0.00) @db.Decimal(10, 2)
+  distanceKm         Decimal          @default(0.00) @db.Decimal(10, 2)
+  totalFare          Decimal          @default(0.00) @db.Decimal(10, 2)
+  cancellationReason String?
+  startedAt          DateTime         @default(now())
+  completedAt        DateTime?
+  deletedAt          DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  payment    Payment?
+  statusLogs TripStatusLog[]
+
+  @@index([status])
+  @@index([ambulanceId])
+  @@index([driverProfileId])
+  @@index([deletedAt])
+  @@map("trips")
+}
+
+model TripStatusLog {
+  id        String     @id @default(uuid())
+  tripId    String
+  trip      Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  status    TripStatus
+  latitude  Float?
+  longitude Float?
+  note      String?
+  timestamp DateTime   @default(now())
+
+  @@index([tripId])
+  @@index([timestamp])
+  @@map("trip_status_logs")
+}

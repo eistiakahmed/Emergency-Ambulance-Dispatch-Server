@@ -1,27 +1,42 @@
 {
-  "name": "Emergency Ambulance B7A6",
+  "name": "emergency-ambulance-dispatch-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Enterprise Emergency Ambulance Dispatch System REST API",
+  "main": "dist/server.js",
+  "type": "module",
   "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:studio": "prisma studio",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
     "check": "biome check --write .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "ambulance",
+    "emergency",
+    "dispatch",
+    "express",
+    "prisma",
+    "postgresql",
+    "stripe"
+  ],
+  "author": "Eistiak Ahmed",
   "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.18.0",
-      "onFail": "download"
-    }
+  "dependencies": {
+    "@prisma/client": "^6.4.0"
   },
-  "type": "module",
   "devDependencies": {
-    "@biomejs/biome": "^2.5.12"
+    "@biomejs/biome": "^2.5.12",
+    "prisma": "^6.4.0"
+  },
+  "prisma": {
+    "schema": "prisma/schema"
   }
 }

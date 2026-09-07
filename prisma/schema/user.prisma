@@ -1,0 +1,39 @@
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String?
+  name      String
+  phone     String?
+  role      Role      @default(PATIENT)
+  googleId  String?   @unique
+  avatar    String?
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  driverProfile     DriverProfile?
+  emergencyRequests EmergencyRequest[]
+  payments          Payment[]
+  auditLogs         AuditLog[]
+  refreshTokens     RefreshToken[]
+
+  @@index([email])
+  @@index([role])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}

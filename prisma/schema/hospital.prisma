@@ -1,0 +1,22 @@
+model Hospital {
+  id                     String    @id @default(uuid())
+  name                   String
+  address                String
+  latitude               Float
+  longitude              Float
+  contactPhone           String
+  emergencyBedsTotal     Int       @default(10)
+  emergencyBedsAvailable Int       @default(10)
+  hasIcu                 Boolean   @default(true)
+  icuBedsAvailable       Int       @default(2)
+  deletedAt              DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  emergencyRequests EmergencyRequest[]
+  trips             Trip[]
+
+  @@index([emergencyBedsAvailable])
+  @@index([deletedAt])
+  @@map("hospitals")
+}

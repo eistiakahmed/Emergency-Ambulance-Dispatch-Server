@@ -1,0 +1,20 @@
+model DriverProfile {
+  id                 String       @id @default(uuid())
+  userId             String       @unique
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseNumber      String       @unique
+  status             DriverStatus @default(OFFLINE)
+  currentLat         Float?
+  currentLng         Float?
+  lastLocationUpdate DateTime?
+  deletedAt          DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  ambulance Ambulance?
+  trips     Trip[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@map("driver_profiles")
+}

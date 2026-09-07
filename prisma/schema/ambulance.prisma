@@ -1,0 +1,20 @@
+model Ambulance {
+  id              String         @id @default(uuid())
+  plateNumber     String         @unique
+  model           String
+  vehicleType     VehicleType    @default(BASIC_LIFE_SUPPORT)
+  driverProfileId String?        @unique
+  driverProfile   DriverProfile? @relation(fields: [driverProfileId], references: [id], onDelete: SetNull)
+  isOperational   Boolean        @default(true)
+  equipment       String[]
+  deletedAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  trips Trip[]
+
+  @@index([vehicleType])
+  @@index([isOperational])
+  @@index([deletedAt])
+  @@map("ambulances")
+}
