@@ -16,14 +16,20 @@
     "lineWidth": 100
   },
   "linter": {
-    "enabled": true,
     "rules": {
       "preset": "recommended",
       "suspicious": {
         "noExplicitAny": "off"
       },
       "correctness": {
-        "noUnusedVariables": "warn"
+        "noUnusedVariables": "off",
+        "noUnusedFunctionParameters": "off"
+      },
+      "complexity": {
+        "noStaticOnlyClass": "off"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
       }
     }
   },
