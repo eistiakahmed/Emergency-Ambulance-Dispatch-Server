@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { BadRequestError, NotFoundError } from '../../common/errors/AppError.js';
 import { EmailService } from '../../common/services/email.service.js';
 import { logAuditEvent } from '../../common/utils/auditLogger.js';
+import { calculateDistanceKm, calculateEtaMinutes } from '../../common/utils/geo.js';
 import { FARE_CONFIG } from '../../config/constants.js';
 import { prisma } from '../../config/prisma.js';
 
@@ -62,8 +63,8 @@ export class TripService {
           );
         }
       } else {
-        // Auto-match first available operational ambulance with active driver
-        ambulance = await tx.ambulance.findFirst({
+        // Auto-match nearest available operational ambulance based on GPS coordinates
+        const availableAmbulances = await tx.ambulance.findMany({
           where: {
             isOperational: true,
             deletedAt: null,
@@ -77,6 +78,41 @@ export class TripService {
             },
           },
         });
+
+        if (!availableAmbulances.length) {
+          throw new BadRequestError(
+            'No operational ambulances or drivers are currently available for dispatch'
+          );
+        }
+
+        // If pickup coordinates exist, sort by nearest distance using Haversine formula
+        if (emergency.pickupLat && emergency.pickupLng) {
+          availableAmbulances.sort((a, b) => {
+            const distA =
+              a.driverProfile?.currentLat && a.driverProfile?.currentLng
+                ? calculateDistanceKm(
+                    emergency.pickupLat!,
+                    emergency.pickupLng!,
+                    a.driverProfile.currentLat,
+                    a.driverProfile.currentLng
+                  )
+                : Number.POSITIVE_INFINITY;
+
+            const distB =
+              b.driverProfile?.currentLat && b.driverProfile?.currentLng
+                ? calculateDistanceKm(
+                    emergency.pickupLat!,
+                    emergency.pickupLng!,
+                    b.driverProfile.currentLat,
+                    b.driverProfile.currentLng
+                  )
+                : Number.POSITIVE_INFINITY;
+
+            return distA - distB;
+          });
+        }
+
+        ambulance = availableAmbulances[0];
 
         if (!ambulance?.driverProfile) {
           throw new BadRequestError(
@@ -121,14 +157,31 @@ export class TripService {
         data: { status: 'DISPATCHED' },
       });
 
-      // 5. Create initial TripStatusLog
+      // 5. Create initial TripStatusLog with distance & ETA calculation
+      let dispatchNote = `Unit ${ambulance.plateNumber} dispatched by ${actor.role}`;
+      if (
+        emergency.pickupLat &&
+        emergency.pickupLng &&
+        ambulance.driverProfile.currentLat &&
+        ambulance.driverProfile.currentLng
+      ) {
+        const dist = calculateDistanceKm(
+          emergency.pickupLat,
+          emergency.pickupLng,
+          ambulance.driverProfile.currentLat,
+          ambulance.driverProfile.currentLng
+        );
+        const eta = calculateEtaMinutes(dist);
+        dispatchNote += ` — Distance: ${dist}km, ETA: ~${eta} mins`;
+      }
+
       await tx.tripStatusLog.create({
         data: {
           tripId: trip.id,
           status: 'ASSIGNED',
           latitude: ambulance.driverProfile.currentLat,
           longitude: ambulance.driverProfile.currentLng,
-          note: `Unit ${ambulance.plateNumber} dispatched by ${actor.role}`,
+          note: dispatchNote,
         },
       });
 

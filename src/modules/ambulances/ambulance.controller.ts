@@ -75,4 +75,23 @@ export class AmbulanceController {
       next(error);
     }
   }
+
+  static async getNearby(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { latitude, longitude, radiusKm, vehicleType } = req.query as any;
+      const ambulances = await AmbulanceService.findNearbyAmbulances({
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        radiusKm: radiusKm ? Number(radiusKm) : undefined,
+        vehicleType: vehicleType as string,
+      });
+      return ApiResponse.success(
+        res,
+        ambulances,
+        `Found ${ambulances.length} available ambulances nearby`
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import { ConflictError, NotFoundError } from '../../common/errors/AppError.js';
 import { RedisService } from '../../common/services/redis.service.js';
 import { logAuditEvent } from '../../common/utils/auditLogger.js';
+import { calculateDistanceKm, calculateEtaMinutes } from '../../common/utils/geo.js';
 import { buildPaginatedResponse, parsePaginationParams } from '../../common/utils/pagination.js';
 import { prisma } from '../../config/prisma.js';
 
@@ -180,5 +181,56 @@ export class AmbulanceService {
     });
     if (!profile) throw new NotFoundError('Driver profile not found');
     return profile;
+  }
+
+  static async findNearbyAmbulances(query: {
+    latitude: number;
+    longitude: number;
+    radiusKm?: number;
+    vehicleType?: string;
+  }) {
+    const radius = query.radiusKm || 25;
+    const ambulances = await prisma.ambulance.findMany({
+      where: {
+        isOperational: true,
+        deletedAt: null,
+        ...(query.vehicleType ? { vehicleType: query.vehicleType as any } : {}),
+        driverProfile: {
+          status: 'AVAILABLE',
+          currentLat: { not: null },
+          currentLng: { not: null },
+        },
+      },
+      include: {
+        driverProfile: {
+          include: {
+            user: { select: { name: true, phone: true } },
+          },
+        },
+      },
+    });
+
+    const results = ambulances
+      .map((amb) => {
+        const driverLat = amb.driverProfile!.currentLat!;
+        const driverLng = amb.driverProfile!.currentLng!;
+        const distanceKm = calculateDistanceKm(
+          query.latitude,
+          query.longitude,
+          driverLat,
+          driverLng
+        );
+        const etaMinutes = calculateEtaMinutes(distanceKm);
+
+        return {
+          ...amb,
+          distanceKm,
+          etaMinutes,
+        };
+      })
+      .filter((amb) => amb.distanceKm <= radius)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    return results;
   }
 }

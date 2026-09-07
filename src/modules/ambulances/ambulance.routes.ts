@@ -5,6 +5,7 @@ import { validate } from '../../common/middlewares/validate.middleware.js';
 import { AmbulanceController } from './ambulance.controller.js';
 import {
   createAmbulanceSchema,
+  getNearbyAmbulancesSchema,
   updateAmbulanceSchema,
   updateDriverStatusSchema,
 } from './ambulance.validation.js';
@@ -23,7 +24,12 @@ router.patch(
 
 router.get('/driver/me', requireRoles('DRIVER'), AmbulanceController.getMyVehicle);
 
-// Fleet listing & details
+// Fleet listing, nearby search & details
+router.get(
+  '/nearby',
+  validate({ query: getNearbyAmbulancesSchema }),
+  AmbulanceController.getNearby
+);
 router.get('/', AmbulanceController.list);
 router.get('/:id', AmbulanceController.getById);
 
