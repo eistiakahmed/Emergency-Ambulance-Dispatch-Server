@@ -1,0 +1,267 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Emergency Ambulance Dispatch System REST API",
+    "version": "1.0.0",
+    "description": "Enterprise mission-critical emergency ambulance dispatching and fleet tracking REST API.",
+    "contact": {
+      "name": "Eistiak Ahmed",
+      "email": "eistiakahmedmeraj@gmail.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api/v1",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "API Health Check",
+        "security": [],
+        "responses": {
+          "200": { "description": "Server is operational" }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register as Patient or Driver",
+        "security": [],
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login with Email and Password",
+        "security": [],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/auth/google": {
+      "post": {
+        "summary": "GCP Google Social Login",
+        "security": [],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "summary": "Rotate JWT refresh token",
+        "security": [],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Revoke authentication token",
+        "security": [],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "summary": "Get authenticated user profile",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "patch": {
+        "summary": "Update user profile details",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/users/me/avatar": {
+      "patch": {
+        "summary": "Upload profile avatar to Cloudinary",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/hospitals": {
+      "get": {
+        "summary": "List hospitals with pagination and bed availability filters",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "post": {
+        "summary": "Create new hospital (Admin only)",
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/hospitals/{id}": {
+      "get": {
+        "summary": "Get hospital details",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "patch": {
+        "summary": "Update hospital details (Admin)",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "delete": {
+        "summary": "Soft delete hospital (Admin)",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/hospitals/{id}/beds": {
+      "patch": {
+        "summary": "Update emergency and ICU bed counts",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/ambulances": {
+      "get": {
+        "summary": "List ambulances with pagination and vehicle type filters",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "post": {
+        "summary": "Register new ambulance into fleet (Admin)",
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/ambulances/{id}": {
+      "get": {
+        "summary": "Get ambulance details",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "patch": {
+        "summary": "Update ambulance status and equipment",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "delete": {
+        "summary": "Soft delete ambulance",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/ambulances/driver/status": {
+      "patch": {
+        "summary": "Driver shift and live GPS coordinates update",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/ambulances/driver/me": {
+      "get": {
+        "summary": "Driver get assigned ambulance and profile",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/emergencies": {
+      "get": {
+        "summary": "List emergency requests",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "post": {
+        "summary": "Create emergency request with priority triage",
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/emergencies/{id}": {
+      "get": {
+        "summary": "Get emergency request details",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/emergencies/{id}/cancel": {
+      "post": {
+        "summary": "Cancel emergency request prior to pickup",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/trips/dispatch": {
+      "post": {
+        "summary": "Transaction-safe emergency ambulance dispatch",
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/trips/active": {
+      "get": {
+        "summary": "Get current active trip for logged-in user",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/trips/{id}": {
+      "get": {
+        "summary": "Get trip milestone history and status logs",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/trips/{id}/status": {
+      "patch": {
+        "summary": "Advance trip status milestone",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/trips/{id}/reassign": {
+      "post": {
+        "summary": "Reassign trip to another ambulance unit",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/payments/initiate": {
+      "post": {
+        "summary": "Initiate Stripe checkout session for completed trip",
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/payments/webhook": {
+      "post": {
+        "summary": "Stripe webhook endpoint for signature verification",
+        "security": [],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/payments/{id}": {
+      "get": {
+        "summary": "Get payment details and verification status",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/payments/trip/{tripId}": {
+      "get": {
+        "summary": "Get payment by trip ID",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "summary": "List all system users with search and role filter",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/admin/users/{id}/role": {
+      "patch": {
+        "summary": "Modify user role (Admin)",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/admin/users/{id}/status": {
+      "patch": {
+        "summary": "Activate or deactivate user account (Admin)",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/admin/dashboard-stats": {
+      "get": {
+        "summary": "Get executive KPI operational analytics",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/admin/audit-logs": {
+      "get": {
+        "summary": "Query immutable audit logs trail",
+        "responses": { "200": { "description": "Success" } }
+      }
+    }
+  }
+}

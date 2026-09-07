@@ -1,0 +1,415 @@
+{
+  "info": {
+    "name": "Emergency Ambulance Dispatch System API",
+    "description": "Production Postman collection covering 25+ REST API endpoints across Auth, Profile, Hospitals, Fleet, Emergency Requests, Dispatch State Machine, Stripe Payments, and Admin Operations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    { "key": "patientToken", "value": "" },
+    { "key": "driverToken", "value": "" },
+    { "key": "adminToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register Patient",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient.test@emergency.com\",\n  \"password\": \"PatientPass123!\",\n  \"name\": \"Test Patient\",\n  \"phone\": \"+8801700000001\",\n  \"role\": \"PATIENT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register Driver",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"driver.test@emergency.com\",\n  \"password\": \"DriverPass123!\",\n  \"name\": \"Test Driver\",\n  \"phone\": \"+8801800000001\",\n  \"role\": \"DRIVER\",\n  \"licenseNumber\": \"DL-TEST-999\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@emergency.com\",\n  \"password\": \"AdminPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your_refresh_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh-token"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your_refresh_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. User Profile",
+      "item": [
+        {
+          "name": "Get Profile (/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Chowdhury Updated\",\n  \"phone\": \"+8801999999999\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Hospitals",
+      "item": [
+        {
+          "name": "List Hospitals (with Filters & Pagination)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals?page=1&limit=10&hasIcu=true&search=Dhaka",
+              "host": ["{{baseUrl}}"],
+              "path": ["hospitals"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "hasIcu", "value": "true" },
+                { "key": "search", "value": "Dhaka" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Hospital (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"National Heart Foundation Hospital\",\n  \"address\": \"Plot 4, Road 2, Section 2, Mirpur, Dhaka 1216\",\n  \"latitude\": 23.8068,\n  \"longitude\": 90.3582,\n  \"contactPhone\": \"+880258054708\",\n  \"emergencyBedsTotal\": 35,\n  \"emergencyBedsAvailable\": 12,\n  \"hasIcu\": true,\n  \"icuBedsAvailable\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hospitals",
+              "host": ["{{baseUrl}}"],
+              "path": ["hospitals"]
+            }
+          }
+        },
+        {
+          "name": "Update Hospital Beds",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emergencyBedsAvailable\": 15,\n  \"icuBedsAvailable\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/:id/beds",
+              "host": ["{{baseUrl}}"],
+              "path": ["hospitals", ":id", "beds"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Ambulances & Fleet",
+      "item": [
+        {
+          "name": "List Ambulances (with filters)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/ambulances?page=1&limit=10&isOperational=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["ambulances"]
+            }
+          }
+        },
+        {
+          "name": "Driver Update Status & GPS Coordinates",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"AVAILABLE\",\n  \"latitude\": 23.8103,\n  \"longitude\": 90.4125\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ambulances/driver/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["ambulances", "driver", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Emergency Requests & Dispatch",
+      "item": [
+        {
+          "name": "Create Emergency Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientName\": \"Alice Chowdhury\",\n  \"patientPhone\": \"+8801911000001\",\n  \"priority\": \"CRITICAL\",\n  \"pickupAddress\": \"House 42, Road 7, Dhanmondi, Dhaka\",\n  \"pickupLatitude\": 23.7461,\n  \"pickupLongitude\": 90.3742,\n  \"symptoms\": \"Sudden severe chest pain, loss of consciousness\",\n  \"notes\": \"Floor 3, lift available, immediate ICU needed\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/emergencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["emergencies"]
+            }
+          }
+        },
+        {
+          "name": "Dispatch Ambulance (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emergencyRequestId\": \"your_emergency_id_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/dispatch",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "dispatch"]
+            }
+          }
+        },
+        {
+          "name": "Get Active Trip",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/trips/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "active"]
+            }
+          }
+        },
+        {
+          "name": "Advance Trip Status (Driver)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EN_ROUTE_PICKUP\",\n  \"latitude\": 23.7500,\n  \"longitude\": 90.3800,\n  \"note\": \"Navigating through traffic, sirens active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/:id/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", ":id", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Payments (Stripe)",
+      "item": [
+        {
+          "name": "Initiate Stripe Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripId\": \"your_completed_trip_id_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/initiate",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "initiate"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/payments/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", ":id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Admin Operations",
+      "item": [
+        {
+          "name": "List Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=1&limit=10&role=DRIVER",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:id/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", ":id", "role"]
+            }
+          }
+        },
+        {
+          "name": "Dashboard KPI Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard-stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard-stats"]
+            }
+          }
+        },
+        {
+          "name": "Audit Logs Trail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
