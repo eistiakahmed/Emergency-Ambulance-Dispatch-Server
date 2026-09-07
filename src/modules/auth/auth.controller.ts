@@ -6,6 +6,12 @@ export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await AuthService.register(req.body);
+      res.cookie('refreshToken', result.tokens.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
       return ApiResponse.created(res, result, 'User registered successfully');
     } catch (error) {
       next(error);
@@ -16,6 +22,12 @@ export class AuthController {
     try {
       const { email, password } = req.body;
       const result = await AuthService.login(email, password);
+      res.cookie('refreshToken', result.tokens.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
       return ApiResponse.success(res, result, 'Login successful');
     } catch (error) {
       next(error);
@@ -26,6 +38,12 @@ export class AuthController {
     try {
       const { idToken, role } = req.body;
       const result = await AuthService.googleLogin(idToken, role);
+      res.cookie('refreshToken', result.tokens.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
       return ApiResponse.success(res, result, 'Google authentication successful');
     } catch (error) {
       next(error);
@@ -34,8 +52,14 @@ export class AuthController {
 
   static async refreshToken(req: Request, res: Response, next: NextFunction) {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.body.refreshToken || req.cookies?.refreshToken;
       const result = await AuthService.refreshToken(refreshToken);
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
       return ApiResponse.success(res, result, 'Tokens refreshed successfully');
     } catch (error) {
       next(error);
@@ -44,10 +68,11 @@ export class AuthController {
 
   static async logout(req: Request, res: Response, next: NextFunction) {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.body.refreshToken || req.cookies?.refreshToken;
       if (refreshToken) {
         await AuthService.logout(refreshToken);
       }
+      res.clearCookie('refreshToken');
       return ApiResponse.success(res, null, 'Logged out successfully');
     } catch (error) {
       next(error);

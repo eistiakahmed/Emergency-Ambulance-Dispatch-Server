@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Request, type Response } from 'express';
 import helmet from 'helmet';
@@ -41,7 +42,8 @@ app.use(
   }
 );
 
-// 3. JSON & URL-Encoded Parsers
+// 3. JSON, URL-Encoded & Cookie Parsers
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

@@ -1,4 +1,5 @@
 import type { Response } from 'express';
+import httpStatus from 'http-status';
 
 export interface StandardSuccessResponse<T = any> {
   success: true;
@@ -23,7 +24,7 @@ export class ApiResponse {
     res: Response,
     data: T,
     message = 'Operation successful',
-    statusCode = 200,
+    statusCode: number = httpStatus.OK,
     meta?: StandardSuccessResponse<T>['meta']
   ) {
     const payload: StandardSuccessResponse<T> = {
@@ -36,7 +37,7 @@ export class ApiResponse {
   }
 
   static created<T>(res: Response, data: T, message = 'Resource created successfully') {
-    return ApiResponse.success(res, data, message, 201);
+    return ApiResponse.success(res, data, message, httpStatus.CREATED);
   }
 
   static error(
