@@ -2,6 +2,7 @@
 node_modules/
 .pnp/
 .pnp.js
+.pnpm-store/
 
 # Build output
 dist/
@@ -21,21 +22,16 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+
+# Coverage directory
+coverage/
 
 # OS Files
 .DS_Store
 Thumbs.db
 
-# Coverage directory
-coverage/
-
-# IDE files
+# IDE and temporary files
 .vscode/
 .idea/
 .agents
-implementation_plan.md
-plan.md
-Agent.md
-Agents.md
-AGENTS.md
-AGENTS.md
