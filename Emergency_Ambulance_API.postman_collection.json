@@ -1,0 +1,816 @@
+{
+  "info": {
+    "name": "Emergency Ambulance Dispatch System REST API",
+    "description": "Production Postman collection covering 30+ REST API endpoints across Health, Authentication, Redis-powered OTP, Profile, Hospitals & ICU Beds, Fleet & GPS Geolocation, Emergency Requests, Dispatch State Machine (FSM), Stripe Payments & Webhooks, and Executive Admin Operations.\n\nAuto-auth script automatically sets {{adminToken}}, {{driverToken}}, and {{patientToken}} upon successful login.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    { "key": "patientToken", "value": "" },
+    { "key": "driverToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "emergencyId", "value": "" },
+    { "key": "ambulanceId", "value": "" },
+    { "key": "tripId", "value": "" },
+    { "key": "hospitalId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Authentication & OTP",
+      "item": [
+        {
+          "name": "Send Email Verification OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@emergency.com\",\n  \"name\": \"New User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/send-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "send-otp"]
+            }
+          }
+        },
+        {
+          "name": "Verify Email OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@emergency.com\",\n  \"otp\": \"123456\",\n  \"purpose\": \"VERIFY_EMAIL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-otp"]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password (Request OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient.alice@emergency.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "forgot-password"]
+            }
+          }
+        },
+        {
+          "name": "Reset Password with OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient.alice@emergency.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "reset-password"]
+            }
+          }
+        },
+        {
+          "name": "Register Patient",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient.test@emergency.com\",\n  \"password\": \"PatientPass123!\",\n  \"name\": \"Test Patient\",\n  \"phone\": \"+8801700000001\",\n  \"role\": \"PATIENT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register Driver",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"driver.test@emergency.com\",\n  \"password\": \"DriverPass123!\",\n  \"name\": \"Test Driver\",\n  \"phone\": \"+8801800000001\",\n  \"role\": \"DRIVER\",\n  \"licenseNumber\": \"DL-TEST-999\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login - Admin (Auto Token Capture)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.tokens) {",
+                  "  pm.collectionVariables.set('adminToken', res.data.tokens.accessToken);",
+                  "  console.log('✅ Captured adminToken:', res.data.tokens.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@emergency.com\",\n  \"password\": \"AdminPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Driver (Auto Token Capture)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.tokens) {",
+                  "  pm.collectionVariables.set('driverToken', res.data.tokens.accessToken);",
+                  "  console.log('✅ Captured driverToken:', res.data.tokens.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"driver.john@emergency.com\",\n  \"password\": \"DriverPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Patient (Auto Token Capture)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.tokens) {",
+                  "  pm.collectionVariables.set('patientToken', res.data.tokens.accessToken);",
+                  "  console.log('✅ Captured patientToken:', res.data.tokens.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient.alice@emergency.com\",\n  \"password\": \"PatientPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your_refresh_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh-token"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your_refresh_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. User Profile",
+      "item": [
+        {
+          "name": "Get Profile (/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Chowdhury Updated\",\n  \"phone\": \"+8801999999999\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Upload Avatar",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "avatar", "type": "file", "src": "" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/avatar",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "avatar"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Hospitals & Emergency Beds",
+      "item": [
+        {
+          "name": "List Hospitals (Filters & Search)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals?page=1&limit=10&hasIcu=true&search=Dhaka",
+              "host": ["{{baseUrl}}"],
+              "path": ["hospitals"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "hasIcu", "value": "true" },
+                { "key": "search", "value": "Dhaka" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Hospital (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data) {",
+                  "  pm.collectionVariables.set('hospitalId', res.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"National Institute of Cardiovascular Diseases\",\n  \"address\": \"Sher-e-Bangla Nagar, Dhaka 1207\",\n  \"latitude\": 23.7712,\n  \"longitude\": 90.3688,\n  \"contactPhone\": \"+88029122560\",\n  \"emergencyBedsTotal\": 40,\n  \"emergencyBedsAvailable\": 14,\n  \"hasIcu\": true,\n  \"icuBedsAvailable\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hospitals",
+              "host": ["{{baseUrl}}"],
+              "path": ["hospitals"]
+            }
+          }
+        },
+        {
+          "name": "Get Hospital By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/{{hospitalId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["hospitals", "{{hospitalId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Available Beds (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emergencyBedsAvailable\": 8,\n  \"icuBedsAvailable\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/{{hospitalId}}/beds",
+              "host": ["{{baseUrl}}"],
+              "path": ["hospitals", "{{hospitalId}}", "beds"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Ambulances & Fleet",
+      "item": [
+        {
+          "name": "Find Nearby Ambulances (GPS & ETA Calculation)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/ambulances/nearby?latitude=23.7944&longitude=90.4042&radiusKm=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["ambulances", "nearby"],
+              "query": [
+                { "key": "latitude", "value": "23.7944" },
+                { "key": "longitude", "value": "90.4042" },
+                { "key": "radiusKm", "value": "25" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Ambulances (Fleet)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/ambulances?page=1&limit=10&isOperational=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["ambulances"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "isOperational", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Driver Update Status & Live GPS",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"AVAILABLE\",\n  \"latitude\": 23.8103,\n  \"longitude\": 90.4125\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ambulances/driver/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["ambulances", "driver", "status"]
+            }
+          }
+        },
+        {
+          "name": "Driver Get Assigned Vehicle",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{driverToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/ambulances/driver/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["ambulances", "driver", "me"]
+            }
+          }
+        },
+        {
+          "name": "Create Ambulance (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data) {",
+                  "  pm.collectionVariables.set('ambulanceId', res.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plateNumber\": \"DHK-EMERG-777\",\n  \"model\": \"Ford Transit Custom Mobile ER\",\n  \"vehicleType\": \"ADVANCED_LIFE_SUPPORT\",\n  \"isOperational\": true,\n  \"equipment\": [\"Zoll Defibrillator\", \"Transport Ventilator\", \"Portable Suction\", \"Stretcher\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ambulances",
+              "host": ["{{baseUrl}}"],
+              "path": ["ambulances"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Emergency Requests",
+      "item": [
+        {
+          "name": "Create Emergency Request (Patient Triage)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data) {",
+                  "  pm.collectionVariables.set('emergencyId', res.data.id);",
+                  "  console.log('✅ Captured emergencyId:', res.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientName\": \"Alice Chowdhury\",\n  \"patientPhone\": \"+8801911000001\",\n  \"pickupAddress\": \"House 42, Road 11, Block D, Banani, Dhaka\",\n  \"pickupLatitude\": 23.7937,\n  \"pickupLongitude\": 90.4066,\n  \"symptoms\": \"Acute cardiac arrest symptoms and shortness of breath\",\n  \"priority\": \"CRITICAL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/emergencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["emergencies"]
+            }
+          }
+        },
+        {
+          "name": "List Emergency Requests",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/emergencies?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["emergencies"]
+            }
+          }
+        },
+        {
+          "name": "Get Emergency Request By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/emergencies/{{emergencyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["emergencies", "{{emergencyId}}"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Emergency Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Resolved with local clinic\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/emergencies/{{emergencyId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["emergencies", "{{emergencyId}}", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Trip Dispatch & State Machine (FSM)",
+      "item": [
+        {
+          "name": "Dispatch Ambulance (Nearest Auto-Match)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data) {",
+                  "  pm.collectionVariables.set('tripId', res.data.id);",
+                  "  console.log('✅ Captured tripId:', res.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emergencyRequestId\": \"{{emergencyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/dispatch",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "dispatch"]
+            }
+          }
+        },
+        {
+          "name": "Get Active Ongoing Trip",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/trips/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "active"]
+            }
+          }
+        },
+        {
+          "name": "Get Trip Details with Audit Trail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            }
+          }
+        },
+        {
+          "name": "Advance Milestone 1: EN_ROUTE_PICKUP",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EN_ROUTE_PICKUP\",\n  \"latitude\": 23.8010,\n  \"longitude\": 90.4100,\n  \"note\": \"Unit rolling with sirens\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Advance Milestone 2: PATIENT_PICKED_UP",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PATIENT_PICKED_UP\",\n  \"latitude\": 23.7937,\n  \"longitude\": 90.4066,\n  \"note\": \"Patient stabilized in ICU vehicle\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Advance Milestone 3: EN_ROUTE_HOSPITAL",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EN_ROUTE_HOSPITAL\",\n  \"latitude\": 23.7700,\n  \"longitude\": 90.3900,\n  \"note\": \"Transiting to destination hospital ER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Advance Milestone 4: ARRIVED_HOSPITAL",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ARRIVED_HOSPITAL\",\n  \"latitude\": 23.7533,\n  \"longitude\": 90.3817,\n  \"note\": \"Arrived at ER trauma bay\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Advance Milestone 5: COMPLETED (Auto-Fare & Frees Driver)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{driverToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\",\n  \"distanceKm\": 8.5,\n  \"note\": \"Handed over to ER medical staff\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Stripe Payments",
+      "item": [
+        {
+          "name": "Initiate Stripe Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{patientToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripId\": \"{{tripId}}\",\n  \"successUrl\": \"http://localhost:3000/payments/success?tripId={{tripId}}\",\n  \"cancelUrl\": \"http://localhost:3000/payments/cancel?tripId={{tripId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/initiate",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "initiate"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment By Trip ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/payments/trip/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "trip", "{{tripId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Executive Admin Operations",
+      "item": [
+        {
+          "name": "Executive Dashboard KPI Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard-stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard-stats"]
+            }
+          }
+        },
+        {
+          "name": "List All Users (Admin Filter)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "System Audit Logs Trail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
