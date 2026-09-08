@@ -209,6 +209,23 @@
       "name": "4. Ambulances & Fleet",
       "item": [
         {
+          "name": "Find Nearby Ambulances (GPS & ETA)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/ambulances/nearby?latitude=23.7944&longitude=90.4042&radiusKm=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["ambulances", "nearby"],
+              "query": [
+                { "key": "latitude", "value": "23.7944" },
+                { "key": "longitude", "value": "90.4042" },
+                { "key": "radiusKm", "value": "25" }
+              ]
+            }
+          }
+        },
+        {
           "name": "List Ambulances (with filters)",
           "request": {
             "method": "GET",
