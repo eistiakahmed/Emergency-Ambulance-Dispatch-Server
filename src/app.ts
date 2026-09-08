@@ -59,7 +59,21 @@ try {
   console.warn('⚠️ Could not load swagger.json for /docs:', err);
 }
 
-// 6. Health Check Endpoint
+// 6. Root & Health Check Endpoints
+app.get('/', (_req: Request, res: Response) => {
+  return ApiResponse.success(
+    res,
+    {
+      name: 'Emergency Ambulance Dispatch System REST API',
+      version: '1.0.0',
+      status: 'ONLINE',
+      docs: `${env.API_PREFIX}/docs`,
+      health: `${env.API_PREFIX}/health`,
+    },
+    'Welcome to Emergency Ambulance Dispatch API'
+  );
+});
+
 app.get(`${env.API_PREFIX}/health`, (_req: Request, res: Response) => {
   return ApiResponse.success(
     res,
