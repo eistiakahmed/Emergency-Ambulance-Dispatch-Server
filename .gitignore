@@ -14,6 +14,9 @@ build/
 .env.*
 !.env.example
 
+# Uploads directory (local fallback)
+uploads/
+
 # Logs
 logs/
 *.log

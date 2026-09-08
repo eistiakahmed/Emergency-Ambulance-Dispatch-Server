@@ -47,8 +47,9 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 4. Rate Limiter
+// 4. Rate Limiter & Static Uploads
 app.use(globalRateLimiter);
+app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
 // 5. Swagger Interactive API Documentation
 try {
