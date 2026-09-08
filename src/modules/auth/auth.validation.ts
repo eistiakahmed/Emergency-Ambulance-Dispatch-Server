@@ -5,9 +5,16 @@ export const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters long'),
   name: z.string().min(2, 'Name must be at least 2 characters long'),
   phone: z.string().optional(),
-  role: z.enum(['PATIENT', 'DRIVER']).default('PATIENT'),
+  role: z
+    .preprocess(
+      (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+      z.enum(['PATIENT', 'DRIVER', 'ADMIN'])
+    )
+    .default('PATIENT'),
   // Driver specific optional fields
   licenseNumber: z.string().optional(),
+  // Email verification OTP
+  otp: z.string().min(4).max(8).optional(),
 });
 
 export const loginSchema = z.object({

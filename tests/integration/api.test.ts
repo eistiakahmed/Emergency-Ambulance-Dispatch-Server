@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { app } from '../../src/app.js';
+import { RedisService } from '../../src/common/services/redis.service.js';
 import { prisma } from '../../src/config/prisma.js';
 
 describe('Emergency Ambulance Dispatch System — Core API Integration Tests', () => {
@@ -51,13 +52,31 @@ describe('Emergency Ambulance Dispatch System — Core API Integration Tests', (
     expect(res.body.errors.length).toBeGreaterThan(0);
   });
 
-  it('POST /api/v1/auth/register should successfully register a new Patient', async () => {
+  it('POST /api/v1/auth/register should fail when OTP is missing or unverified', async () => {
     const res = await request(app).post('/api/v1/auth/register').send({
       email: testEmail,
       password: 'ValidPassword123!',
       name: 'Automated Test Patient',
       phone: '+8801700999999',
       role: 'PATIENT',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('Email verification required');
+  });
+
+  it('POST /api/v1/auth/register should successfully register when valid OTP is provided', async () => {
+    const testOtp = '882299';
+    await RedisService.setOtp('VERIFY_EMAIL', testEmail, testOtp, 300);
+
+    const res = await request(app).post('/api/v1/auth/register').send({
+      email: testEmail,
+      password: 'ValidPassword123!',
+      name: 'Automated Test Patient',
+      phone: '+8801700999999',
+      role: 'PATIENT',
+      otp: testOtp,
     });
 
     expect(res.status).toBe(201);

@@ -22,8 +22,9 @@ export class AuthService {
     password: string;
     name: string;
     phone?: string;
-    role?: 'PATIENT' | 'DRIVER';
+    role?: 'PATIENT' | 'DRIVER' | 'ADMIN';
     licenseNumber?: string;
+    otp?: string;
   }) {
     const existing = await prisma.user.findUnique({
       where: { email: data.email },
@@ -33,12 +34,26 @@ export class AuthService {
       throw new ConflictError('A user with this email address is already registered');
     }
 
+    // 1. Enforce OTP verification before user creation
+    let isVerified = false;
+    if (data.otp) {
+      isVerified = await RedisService.verifyAndConsumeOtp('VERIFY_EMAIL', data.email, data.otp);
+    } else {
+      isVerified = await RedisService.isEmailPreVerified(data.email);
+    }
+
+    if (!isVerified) {
+      throw new BadRequestError(
+        'Email verification required. Please provide a valid OTP code or verify your email with /auth/verify-otp before registration.'
+      );
+    }
+
     if (data.role === 'DRIVER' && !data.licenseNumber) {
       throw new BadRequestError('Driver registration requires a valid driver license number');
     }
 
     const hashedPassword = await hashPassword(data.password);
-    const userRole = data.role || 'PATIENT';
+    const userRole = (data.role as any) || 'PATIENT';
 
     return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const user = await tx.user.create({
@@ -48,6 +63,7 @@ export class AuthService {
           name: data.name,
           phone: data.phone,
           role: userRole,
+          isActive: true,
         },
       });
 
@@ -81,16 +97,7 @@ export class AuthService {
         newValues: { email: user.email, role: user.role },
       });
 
-      // 1. Generate and cache Email Verification OTP in Redis (5-minute TTL)
-      const verificationOtp = RedisService.generateNumericOtp(6);
-      await RedisService.setOtp('VERIFY_EMAIL', user.email, verificationOtp, 300);
-
-      // 2. Dispatch OTP Verification Email to user's inbox asynchronously
-      EmailService.sendRegisterOtpEmail(user.email, user.name, verificationOtp, 5).catch((e) =>
-        console.warn('Register verification OTP email failed to send:', e)
-      );
-
-      // 3. Send Welcome Email asynchronously
+      // Send Welcome Email asynchronously
       EmailService.sendWelcomeEmail(user.email, user.name).catch((e) =>
         console.warn('Welcome email failed to send:', e)
       );
@@ -103,11 +110,6 @@ export class AuthService {
           role: user.role,
         },
         tokens,
-        verification: {
-          otpSent: true,
-          expiresIn: '5 minutes',
-          message: 'A 6-digit verification code has been sent to your email address',
-        },
       };
     });
   }
@@ -322,9 +324,20 @@ export class AuthService {
       throw new BadRequestError('Invalid or expired OTP code');
     }
 
+    if (purpose === 'VERIFY_EMAIL') {
+      await RedisService.markEmailVerified(email, 900);
+      await prisma.user.updateMany({
+        where: { email },
+        data: { isActive: true },
+      });
+    }
+
     return {
       verified: true,
-      message: 'OTP verified successfully',
+      message:
+        purpose === 'VERIFY_EMAIL'
+          ? 'Email OTP verified successfully. You can now complete registration.'
+          : 'Password reset OTP verified successfully.',
     };
   }
 

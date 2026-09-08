@@ -33,7 +33,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"patient.test@emergency.com\",\n  \"password\": \"PatientPass123!\",\n  \"name\": \"Test Patient\",\n  \"phone\": \"+8801700000001\",\n  \"role\": \"PATIENT\"\n}"
+              "raw": "{\n  \"email\": \"patient.test@emergency.com\",\n  \"password\": \"PatientPass123!\",\n  \"name\": \"Test Patient\",\n  \"phone\": \"+8801700000001\",\n  \"role\": \"PATIENT\",\n  \"otp\": \"123456\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -49,7 +49,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"driver.test@emergency.com\",\n  \"password\": \"DriverPass123!\",\n  \"name\": \"Test Driver\",\n  \"phone\": \"+8801800000001\",\n  \"role\": \"DRIVER\",\n  \"licenseNumber\": \"DL-TEST-999\"\n}"
+              "raw": "{\n  \"email\": \"driver.test@emergency.com\",\n  \"password\": \"DriverPass123!\",\n  \"name\": \"Test Driver\",\n  \"phone\": \"+8801800000001\",\n  \"role\": \"DRIVER\",\n  \"licenseNumber\": \"DL-TEST-999\",\n  \"otp\": \"123456\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",

@@ -93,6 +93,26 @@ export class RedisService {
   }
 
   /**
+   * Mark an email address as pre-verified for registration (TTL default 15 mins = 900s)
+   */
+  static async markEmailVerified(email: string, ttlSeconds = 900): Promise<boolean> {
+    const key = `verified:email:${email.toLowerCase()}`;
+    return RedisService.set(key, true, ttlSeconds);
+  }
+
+  /**
+   * Check if an email was pre-verified, and optionally consume the flag
+   */
+  static async isEmailPreVerified(email: string, consume = true): Promise<boolean> {
+    const key = `verified:email:${email.toLowerCase()}`;
+    const isVerified = await RedisService.get<boolean>(key);
+    if (isVerified && consume) {
+      await RedisService.del(key);
+    }
+    return Boolean(isVerified);
+  }
+
+  /**
    * Generate a secure 6-digit numeric OTP
    */
   static generateNumericOtp(digits = 6): string {
