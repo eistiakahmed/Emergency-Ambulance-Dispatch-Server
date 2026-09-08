@@ -81,7 +81,16 @@ export class AuthService {
         newValues: { email: user.email, role: user.role },
       });
 
-      // Send Welcome Email asynchronously
+      // 1. Generate and cache Email Verification OTP in Redis (5-minute TTL)
+      const verificationOtp = RedisService.generateNumericOtp(6);
+      await RedisService.setOtp('VERIFY_EMAIL', user.email, verificationOtp, 300);
+
+      // 2. Dispatch OTP Verification Email to user's inbox asynchronously
+      EmailService.sendRegisterOtpEmail(user.email, user.name, verificationOtp, 5).catch((e) =>
+        console.warn('Register verification OTP email failed to send:', e)
+      );
+
+      // 3. Send Welcome Email asynchronously
       EmailService.sendWelcomeEmail(user.email, user.name).catch((e) =>
         console.warn('Welcome email failed to send:', e)
       );
@@ -94,6 +103,11 @@ export class AuthService {
           role: user.role,
         },
         tokens,
+        verification: {
+          otpSent: true,
+          expiresIn: '5 minutes',
+          message: 'A 6-digit verification code has been sent to your email address',
+        },
       };
     });
   }
@@ -284,14 +298,12 @@ export class AuthService {
 
   static async sendVerificationOtp(email: string, name = 'User') {
     const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      throw new ConflictError('A user with this email address already exists');
-    }
+    const recipientName = existing?.name || name;
 
     const otp = RedisService.generateNumericOtp(6);
     await RedisService.setOtp('VERIFY_EMAIL', email, otp, 300);
 
-    await EmailService.sendRegisterOtpEmail(email, name, otp, 5);
+    await EmailService.sendRegisterOtpEmail(email, recipientName, otp, 5);
 
     return {
       email,
