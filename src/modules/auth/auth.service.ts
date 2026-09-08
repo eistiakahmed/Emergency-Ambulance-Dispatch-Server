@@ -24,28 +24,13 @@ export class AuthService {
     phone?: string;
     role?: 'PATIENT' | 'DRIVER' | 'ADMIN';
     licenseNumber?: string;
-    otp?: string;
   }) {
     const existing = await prisma.user.findUnique({
       where: { email: data.email },
     });
 
-    if (existing) {
+    if (existing?.isActive) {
       throw new ConflictError('A user with this email address is already registered');
-    }
-
-    // 1. Enforce OTP verification before user creation
-    let isVerified = false;
-    if (data.otp) {
-      isVerified = await RedisService.verifyAndConsumeOtp('VERIFY_EMAIL', data.email, data.otp);
-    } else {
-      isVerified = await RedisService.isEmailPreVerified(data.email);
-    }
-
-    if (!isVerified) {
-      throw new BadRequestError(
-        'Email verification required. Please provide a valid OTP code or verify your email with /auth/verify-otp before registration.'
-      );
     }
 
     if (data.role === 'DRIVER' && !data.licenseNumber) {
@@ -56,36 +41,50 @@ export class AuthService {
     const userRole = (data.role as any) || 'PATIENT';
 
     return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const user = await tx.user.create({
-        data: {
-          email: data.email,
-          password: hashedPassword,
-          name: data.name,
-          phone: data.phone,
-          role: userRole,
-          isActive: true,
-        },
-      });
+      let user = existing;
 
-      if (userRole === 'DRIVER') {
-        const license = data.licenseNumber || `DL-${Date.now()}`;
-        const existingLicense = await tx.driverProfile.findUnique({
-          where: { licenseNumber: license },
-        });
-        if (existingLicense) {
-          throw new ConflictError('This driver license number is already registered in the system');
-        }
-
-        await tx.driverProfile.create({
+      if (existing && !existing.isActive) {
+        user = await tx.user.update({
+          where: { id: existing.id },
           data: {
-            userId: user.id,
-            licenseNumber: license,
-            status: 'AVAILABLE',
+            password: hashedPassword,
+            name: data.name,
+            phone: data.phone,
+            role: userRole,
           },
         });
-      }
+      } else {
+        user = await tx.user.create({
+          data: {
+            email: data.email,
+            password: hashedPassword,
+            name: data.name,
+            phone: data.phone,
+            role: userRole,
+            isActive: false, // Inactive until email OTP is verified!
+          },
+        });
 
-      const tokens = await AuthService.generateAndSaveTokens(user.id, user.email, user.role, tx);
+        if (userRole === 'DRIVER') {
+          const license = data.licenseNumber || `DL-${Date.now()}`;
+          const existingLicense = await tx.driverProfile.findUnique({
+            where: { licenseNumber: license },
+          });
+          if (existingLicense) {
+            throw new ConflictError(
+              'This driver license number is already registered in the system'
+            );
+          }
+
+          await tx.driverProfile.create({
+            data: {
+              userId: user.id,
+              licenseNumber: license,
+              status: 'AVAILABLE',
+            },
+          });
+        }
+      }
 
       await logAuditEvent({
         tx,
@@ -94,12 +93,16 @@ export class AuthService {
         action: 'CREATE',
         resourceType: 'USER',
         resourceId: user.id,
-        newValues: { email: user.email, role: user.role },
+        newValues: { email: user.email, role: user.role, isActive: false },
       });
 
-      // Send Welcome Email asynchronously
-      EmailService.sendWelcomeEmail(user.email, user.name).catch((e) =>
-        console.warn('Welcome email failed to send:', e)
+      // 1. Generate 6-digit numeric OTP and store in Redis (5-minute TTL)
+      const verificationOtp = RedisService.generateNumericOtp(6);
+      await RedisService.setOtp('VERIFY_EMAIL', user.email, verificationOtp, 300);
+
+      // 2. Dispatch OTP Verification Email to user's inbox
+      EmailService.sendRegisterOtpEmail(user.email, user.name, verificationOtp, 5).catch((e) =>
+        console.warn('Register verification OTP email failed to send:', e)
       );
 
       return {
@@ -108,8 +111,14 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
+          isActive: false,
         },
-        tokens,
+        verification: {
+          otpSent: true,
+          expiresIn: '5 minutes',
+          message:
+            'Registration initiated. An OTP has been sent to your email. Please verify your OTP to activate your account.',
+        },
       };
     });
   }
@@ -125,7 +134,9 @@ export class AuthService {
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedError('Your account has been deactivated. Please contact support.');
+      throw new UnauthorizedError(
+        'Your account is not activated yet. Please verify the OTP sent to your email.'
+      );
     }
 
     const isMatch = await comparePassword(password, user.password);
@@ -325,19 +336,51 @@ export class AuthService {
     }
 
     if (purpose === 'VERIFY_EMAIL') {
-      await RedisService.markEmailVerified(email, 900);
-      await prisma.user.updateMany({
+      const user = await prisma.user.findUnique({
+        where: { email },
+        include: { driverProfile: true },
+      });
+
+      if (!user) {
+        throw new NotFoundError('No user account found for this email address');
+      }
+
+      // Activate user in DB
+      const activatedUser = await prisma.user.update({
         where: { email },
         data: { isActive: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isActive: true,
+        },
       });
+
+      // Issue active session tokens
+      const tokens = await AuthService.generateAndSaveTokens(
+        activatedUser.id,
+        activatedUser.email,
+        activatedUser.role
+      );
+
+      // Send Welcome Email now that verification succeeded
+      EmailService.sendWelcomeEmail(activatedUser.email, activatedUser.name).catch((e) =>
+        console.warn('Welcome email failed to send:', e)
+      );
+
+      return {
+        verified: true,
+        message: 'Account verified and created successfully! Welcome email sent.',
+        user: activatedUser,
+        tokens,
+      };
     }
 
     return {
       verified: true,
-      message:
-        purpose === 'VERIFY_EMAIL'
-          ? 'Email OTP verified successfully. You can now complete registration.'
-          : 'Password reset OTP verified successfully.',
+      message: 'Password reset OTP verified successfully.',
     };
   }
 

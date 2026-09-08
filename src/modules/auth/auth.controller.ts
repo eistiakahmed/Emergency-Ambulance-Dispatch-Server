@@ -6,13 +6,19 @@ export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await AuthService.register(req.body);
-      res.cookie('refreshToken', result.tokens.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-      return ApiResponse.created(res, result, 'User registered successfully');
+      if (result.tokens?.refreshToken) {
+        res.cookie('refreshToken', result.tokens.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+      }
+      return ApiResponse.created(
+        res,
+        result,
+        'Registration initiated. Please verify your OTP to activate your account.'
+      );
     } catch (error) {
       next(error);
     }
@@ -93,6 +99,14 @@ export class AuthController {
     try {
       const { email, otp, purpose } = req.body;
       const result = await AuthService.verifyOtp(email, otp, purpose);
+      if (result.tokens?.refreshToken) {
+        res.cookie('refreshToken', result.tokens.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+      }
       return ApiResponse.success(res, result, result.message);
     } catch (error) {
       next(error);

@@ -8,13 +8,11 @@ export const registerSchema = z.object({
   role: z
     .preprocess(
       (val) => (typeof val === 'string' ? val.toUpperCase() : val),
-      z.enum(['PATIENT', 'DRIVER', 'ADMIN'])
+      z.enum(['PATIENT', 'DRIVER'])
     )
     .default('PATIENT'),
   // Driver specific optional fields
   licenseNumber: z.string().optional(),
-  // Email verification OTP
-  otp: z.string().min(4).max(8).optional(),
 });
 
 export const loginSchema = z.object({

@@ -48,6 +48,21 @@
         },
         {
           "name": "Verify Email OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.tokens) {",
+                  "  pm.collectionVariables.set('patientToken', res.data.tokens.accessToken);",
+                  "  console.log('✅ Auto-saved verified token to {{patientToken}}');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -101,7 +116,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"patient.test@emergency.com\",\n  \"password\": \"PatientPass123!\",\n  \"name\": \"Test Patient\",\n  \"phone\": \"+8801700000001\",\n  \"role\": \"PATIENT\",\n  \"otp\": \"123456\"\n}"
+              "raw": "{\n  \"email\": \"patient.test@emergency.com\",\n  \"password\": \"PatientPass123!\",\n  \"name\": \"Test Patient\",\n  \"phone\": \"+8801700000001\",\n  \"role\": \"PATIENT\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -117,7 +132,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"driver.test@emergency.com\",\n  \"password\": \"DriverPass123!\",\n  \"name\": \"Test Driver\",\n  \"phone\": \"+8801800000001\",\n  \"role\": \"DRIVER\",\n  \"licenseNumber\": \"DL-TEST-999\",\n  \"otp\": \"123456\"\n}"
+              "raw": "{\n  \"email\": \"driver.test@emergency.com\",\n  \"password\": \"DriverPass123!\",\n  \"name\": \"Test Driver\",\n  \"phone\": \"+8801800000001\",\n  \"role\": \"DRIVER\",\n  \"licenseNumber\": \"DL-TEST-999\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",

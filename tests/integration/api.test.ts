@@ -52,38 +52,47 @@ describe('Emergency Ambulance Dispatch System — Core API Integration Tests', (
     expect(res.body.errors.length).toBeGreaterThan(0);
   });
 
-  it('POST /api/v1/auth/register should fail when OTP is missing or unverified', async () => {
+  it('POST /api/v1/auth/register should create inactive user and send OTP to email', async () => {
     const res = await request(app).post('/api/v1/auth/register').send({
       email: testEmail,
       password: 'ValidPassword123!',
       name: 'Automated Test Patient',
       phone: '+8801700999999',
       role: 'PATIENT',
-    });
-
-    expect(res.status).toBe(400);
-    expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain('Email verification required');
-  });
-
-  it('POST /api/v1/auth/register should successfully register when valid OTP is provided', async () => {
-    const testOtp = '882299';
-    await RedisService.setOtp('VERIFY_EMAIL', testEmail, testOtp, 300);
-
-    const res = await request(app).post('/api/v1/auth/register').send({
-      email: testEmail,
-      password: 'ValidPassword123!',
-      name: 'Automated Test Patient',
-      phone: '+8801700999999',
-      role: 'PATIENT',
-      otp: testOtp,
     });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.user.email).toBe(testEmail);
+    expect(res.body.data.user.isActive).toBe(false);
+    expect(res.body.data.verification.otpSent).toBe(true);
+  });
+
+  it('POST /api/v1/auth/login should reject login before OTP verification', async () => {
+    const res = await request(app).post('/api/v1/auth/login').send({
+      email: testEmail,
+      password: 'ValidPassword123!',
+    });
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('not activated yet');
+  });
+
+  it('POST /api/v1/auth/verify-otp should activate user, issue JWTs, and trigger welcome email', async () => {
+    const storedOtp = await RedisService.getOtp('VERIFY_EMAIL', testEmail);
+    expect(storedOtp).toBeDefined();
+
+    const res = await request(app).post('/api/v1/auth/verify-otp').send({
+      email: testEmail,
+      otp: storedOtp,
+      purpose: 'VERIFY_EMAIL',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.isActive).toBe(true);
     expect(res.body.data.tokens.accessToken).toBeDefined();
-    expect(res.body.data.tokens.refreshToken).toBeDefined();
 
     accessToken = res.body.data.tokens.accessToken;
   });
