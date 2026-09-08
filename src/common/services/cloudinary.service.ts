@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cloudinary } from '../../config/cloudinary.js';
 import { env } from '../../config/env.js';
-import { AppError } from '../errors/AppError.js';
 
 export class CloudinaryService {
   private static isConfigured(): boolean {
@@ -15,47 +14,58 @@ export class CloudinaryService {
     );
   }
 
+  private static saveLocally(
+    folder: string,
+    fileBuffer: Buffer
+  ): { url: string; publicId: string } {
+    const uploadsDir = join(process.cwd(), 'uploads', folder);
+    if (!existsSync(uploadsDir)) {
+      mkdirSync(uploadsDir, { recursive: true });
+    }
+    const filename = `${randomUUID()}.jpg`;
+    const filePath = join(uploadsDir, filename);
+    writeFileSync(filePath, fileBuffer);
+
+    return {
+      url: `http://localhost:${env.PORT}/uploads/${folder}/${filename}`,
+      publicId: `local_${folder}_${filename}`,
+    };
+  }
+
   static async uploadImage(
     fileBuffer: Buffer,
     folder = 'emergency_ambulance'
   ): Promise<{ url: string; publicId: string }> {
     if (!CloudinaryService.isConfigured()) {
-      // Local development fallback when Cloudinary credentials are placeholders
-      const uploadsDir = join(process.cwd(), 'uploads', folder);
-      if (!existsSync(uploadsDir)) {
-        mkdirSync(uploadsDir, { recursive: true });
-      }
-      const filename = `${randomUUID()}.jpg`;
-      const filePath = join(uploadsDir, filename);
-      writeFileSync(filePath, fileBuffer);
-
-      return {
-        url: `http://localhost:${env.PORT}/uploads/${folder}/${filename}`,
-        publicId: `local_${folder}_${filename}`,
-      };
+      return CloudinaryService.saveLocally(folder, fileBuffer);
     }
 
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          resource_type: 'image',
-          transformation: [{ width: 800, height: 800, crop: 'limit', quality: 'auto' }],
-        },
-        (error, result) => {
-          if (error || !result) {
-            return reject(
-              new AppError(`Image upload failed: ${error?.message || 'Unknown error'}`, 500)
-            );
+    try {
+      return await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder,
+            resource_type: 'image',
+            transformation: [{ width: 800, height: 800, crop: 'limit', quality: 'auto' }],
+          },
+          (error, result) => {
+            if (error || !result) {
+              return reject(error || new Error('Upload result empty'));
+            }
+            resolve({
+              url: result.secure_url,
+              publicId: result.public_id,
+            });
           }
-          resolve({
-            url: result.secure_url,
-            publicId: result.public_id,
-          });
-        }
+        );
+        uploadStream.end(fileBuffer);
+      });
+    } catch (err: any) {
+      console.warn(
+        `⚠️ Cloudinary upload error (${err?.message || 'Unknown error'}). Falling back to local file storage.`
       );
-      uploadStream.end(fileBuffer);
-    });
+      return CloudinaryService.saveLocally(folder, fileBuffer);
+    }
   }
 
   static async deleteImage(publicId: string): Promise<boolean> {
