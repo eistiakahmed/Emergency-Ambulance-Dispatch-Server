@@ -78,4 +78,44 @@ export class AuthController {
       next(error);
     }
   }
+
+  static async sendOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, name } = req.body;
+      const result = await AuthService.sendVerificationOtp(email, name);
+      return ApiResponse.success(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async verifyOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, otp, purpose } = req.body;
+      const result = await AuthService.verifyOtp(email, otp, purpose);
+      return ApiResponse.success(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      const result = await AuthService.forgotPassword(email);
+      return ApiResponse.success(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, otp, newPassword } = req.body;
+      const result = await AuthService.resetPassword({ email, otp, newPassword });
+      return ApiResponse.success(res, null, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

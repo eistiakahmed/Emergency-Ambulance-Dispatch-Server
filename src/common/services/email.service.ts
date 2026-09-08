@@ -1,6 +1,24 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import ejs from 'ejs';
 import { emailTransporter } from '../../config/email.js';
 import { env } from '../../config/env.js';
+
+function renderEjsTemplate(templateName: string, data: Record<string, any>): string {
+  const possiblePaths = [
+    join(process.cwd(), 'src/templates', `${templateName}.ejs`),
+    join(process.cwd(), 'dist/templates', `${templateName}.ejs`),
+  ];
+
+  for (const path of possiblePaths) {
+    if (existsSync(path)) {
+      const templateContent = readFileSync(path, 'utf8');
+      return ejs.render(templateContent, data);
+    }
+  }
+
+  throw new Error(`Template ${templateName}.ejs not found`);
+}
 
 const DISPATCH_ALERT_TEMPLATE = `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
@@ -87,6 +105,80 @@ export class EmailService {
       });
     } catch (error) {
       console.warn('⚠️ Payment receipt email delivery failed:', error);
+    }
+  }
+
+  static async sendRegisterOtpEmail(to: string, name: string, otp: string, expirationMinutes = 5) {
+    try {
+      const html = renderEjsTemplate('register-user-otp', {
+        name,
+        email: to,
+        otp,
+        expirationMinutes,
+      });
+
+      await emailTransporter.sendMail({
+        from: env.EMAIL_FROM,
+        to,
+        subject: '🔐 Your Email Verification Code',
+        html,
+      });
+    } catch (error) {
+      console.warn('⚠️ Register OTP email delivery failed:', error);
+    }
+  }
+
+  static async sendForgotPasswordOtpEmail(
+    to: string,
+    name: string,
+    otp: string,
+    expirationMinutes = 5
+  ) {
+    try {
+      const html = renderEjsTemplate('forgot-password', {
+        name,
+        OTP: otp,
+        expirationMinutes,
+      });
+
+      await emailTransporter.sendMail({
+        from: env.EMAIL_FROM,
+        to,
+        subject: '🔑 Password Reset Request Code',
+        html,
+      });
+    } catch (error) {
+      console.warn('⚠️ Forgot password OTP email delivery failed:', error);
+    }
+  }
+
+  static async sendResetPasswordSuccessEmail(to: string, name: string) {
+    try {
+      const html = renderEjsTemplate('reset-password-success', { name });
+
+      await emailTransporter.sendMail({
+        from: env.EMAIL_FROM,
+        to,
+        subject: '✅ Password Reset Successfully',
+        html,
+      });
+    } catch (error) {
+      console.warn('⚠️ Reset password success email delivery failed:', error);
+    }
+  }
+
+  static async sendWelcomeEmail(to: string, name: string) {
+    try {
+      const html = renderEjsTemplate('welcome-email', { name });
+
+      await emailTransporter.sendMail({
+        from: env.EMAIL_FROM,
+        to,
+        subject: '🏥 Welcome to Emergency Ambulance Dispatch System',
+        html,
+      });
+    } catch (error) {
+      console.warn('⚠️ Welcome email delivery failed:', error);
     }
   }
 }

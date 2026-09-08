@@ -136,8 +136,18 @@
         "parameters": [
           { "name": "latitude", "in": "query", "required": true, "schema": { "type": "number" } },
           { "name": "longitude", "in": "query", "required": true, "schema": { "type": "number" } },
-          { "name": "radiusKm", "in": "query", "required": false, "schema": { "type": "number", "default": 25 } },
-          { "name": "vehicleType", "in": "query", "required": false, "schema": { "type": "string" } }
+          {
+            "name": "radiusKm",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "number", "default": 25 }
+          },
+          {
+            "name": "vehicleType",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
         ],
         "responses": { "200": { "description": "Success" } }
       }

@@ -23,3 +23,24 @@ export const googleAuthSchema = z.object({
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().optional(),
 });
+
+export const sendOtpSchema = z.object({
+  email: z.string().email('Valid email is required'),
+  name: z.string().optional().default('User'),
+});
+
+export const verifyOtpSchema = z.object({
+  email: z.string().email('Valid email is required'),
+  otp: z.string().min(4).max(8, 'Valid OTP is required'),
+  purpose: z.enum(['VERIFY_EMAIL', 'FORGOT_PASSWORD']).default('VERIFY_EMAIL'),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Valid email is required'),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email('Valid email is required'),
+  otp: z.string().min(4).max(8, 'Valid OTP code is required'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters long'),
+});

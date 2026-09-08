@@ -1,6 +1,13 @@
 import type { Prisma } from '@prisma/client';
 import { OAuth2Client } from 'google-auth-library';
-import { BadRequestError, ConflictError, UnauthorizedError } from '../../common/errors/AppError.js';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../../common/errors/AppError.js';
+import { EmailService } from '../../common/services/email.service.js';
+import { RedisService } from '../../common/services/redis.service.js';
 import { logAuditEvent } from '../../common/utils/auditLogger.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../common/utils/jwt.js';
 import { comparePassword, hashPassword } from '../../common/utils/password.js';
@@ -73,6 +80,11 @@ export class AuthService {
         resourceId: user.id,
         newValues: { email: user.email, role: user.role },
       });
+
+      // Send Welcome Email asynchronously
+      EmailService.sendWelcomeEmail(user.email, user.name).catch((e) =>
+        console.warn('Welcome email failed to send:', e)
+      );
 
       return {
         user: {
@@ -267,6 +279,111 @@ export class AuthService {
       refreshToken,
       tokenType: 'Bearer',
       expiresIn: env.JWT_ACCESS_EXPIRES_IN,
+    };
+  }
+
+  static async sendVerificationOtp(email: string, name = 'User') {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      throw new ConflictError('A user with this email address already exists');
+    }
+
+    const otp = RedisService.generateNumericOtp(6);
+    await RedisService.setOtp('VERIFY_EMAIL', email, otp, 300);
+
+    await EmailService.sendRegisterOtpEmail(email, name, otp, 5);
+
+    return {
+      email,
+      expiresIn: '5 minutes',
+      message: 'Verification OTP sent to your email address',
+    };
+  }
+
+  static async verifyOtp(
+    email: string,
+    otp: string,
+    purpose: 'VERIFY_EMAIL' | 'FORGOT_PASSWORD' = 'VERIFY_EMAIL'
+  ) {
+    const isValid = await RedisService.verifyAndConsumeOtp(purpose, email, otp);
+    if (!isValid) {
+      throw new BadRequestError('Invalid or expired OTP code');
+    }
+
+    return {
+      verified: true,
+      message: 'OTP verified successfully',
+    };
+  }
+
+  static async forgotPassword(email: string) {
+    const user = await prisma.user.findFirst({
+      where: { email, deletedAt: null },
+    });
+
+    if (!user) {
+      throw new NotFoundError('No registered account found with this email address');
+    }
+
+    const otp = RedisService.generateNumericOtp(6);
+    await RedisService.setOtp('FORGOT_PASSWORD', email, otp, 300);
+
+    await EmailService.sendForgotPasswordOtpEmail(email, user.name, otp, 5);
+
+    return {
+      email,
+      expiresIn: '5 minutes',
+      message: 'Password reset OTP sent to your email address',
+    };
+  }
+
+  static async resetPassword(data: { email: string; otp: string; newPassword: string }) {
+    const user = await prisma.user.findFirst({
+      where: { email: data.email, deletedAt: null },
+    });
+
+    if (!user) {
+      throw new NotFoundError('No registered account found with this email address');
+    }
+
+    const isValid = await RedisService.verifyAndConsumeOtp('FORGOT_PASSWORD', data.email, data.otp);
+    if (!isValid) {
+      throw new BadRequestError('Invalid or expired OTP code');
+    }
+
+    const hashedPassword = await hashPassword(data.newPassword);
+
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // 1. Update password
+      await tx.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      });
+
+      // 2. Revoke all active refresh tokens for security
+      await tx.refreshToken.deleteMany({
+        where: { userId: user.id },
+      });
+
+      // 3. Log audit event
+      await logAuditEvent({
+        tx,
+        actorId: user.id,
+        actorRole: user.role,
+        action: 'UPDATE',
+        resourceType: 'USER',
+        resourceId: user.id,
+        newValues: { action: 'RESET_PASSWORD' },
+      });
+    });
+
+    // 4. Send success confirmation email
+    EmailService.sendResetPasswordSuccessEmail(user.email, user.name).catch((e) =>
+      console.warn('Reset password confirmation email failed:', e)
+    );
+
+    return {
+      message: 'Password reset successfully. You can now log in with your new password.',
     };
   }
 }
