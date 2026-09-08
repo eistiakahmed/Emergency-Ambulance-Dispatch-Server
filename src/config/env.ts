@@ -27,11 +27,32 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().optional().default(''),
   CLOUDINARY_API_SECRET: z.string().optional().default(''),
 
-  SMTP_HOST: z.string().optional().default('smtp.mailtrap.io'),
-  SMTP_PORT: z.coerce.number().default(2525),
+  SMTP_HOST: z
+    .string()
+    .optional()
+    .default(
+      process.env.SMTP_HOST ||
+        (process.env.SMTP_USER?.includes('@gmail.com') ? 'smtp.gmail.com' : 'smtp.mailtrap.io')
+    ),
+  SMTP_PORT: z.coerce
+    .number()
+    .default(
+      process.env.SMTP_PORT
+        ? Number(process.env.SMTP_PORT)
+        : process.env.SMTP_USER?.includes('@gmail.com')
+          ? 465
+          : 2525
+    ),
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
-  EMAIL_FROM: z.string().default('Emergency Dispatch <noreply@emergency.com>'),
+  EMAIL_FROM: z
+    .string()
+    .default(
+      process.env.EMAIL_FROM ||
+        (process.env.EMAIL_SENDER
+          ? `Emergency Dispatch <${process.env.EMAIL_SENDER}>`
+          : 'Emergency Dispatch <noreply@emergency.com>')
+    ),
 
   STRIPE_SECRET_KEY: z.string().optional().default(''),
   STRIPE_WEBHOOK_SECRET: z.string().optional().default(''),

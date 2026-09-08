@@ -1,10 +1,12 @@
 import { app } from './app.js';
+import { verifyEmailTransporter } from './config/email.js';
 import { env } from './config/env.js';
 import { connectPrisma, prisma } from './config/prisma.js';
 import { redisClient } from './config/redis.js';
 
 async function bootstrap() {
   await connectPrisma();
+  await verifyEmailTransporter();
 
   const server = app.listen(env.PORT, () => {
     console.log(`🚑 =======================================================`);
