@@ -86,13 +86,13 @@ export class TripService {
         }
 
         // If pickup coordinates exist, sort by nearest distance using Haversine formula
-        if (emergency.pickupLat && emergency.pickupLng) {
+        if (emergency.pickupLatitude && emergency.pickupLongitude) {
           availableAmbulances.sort((a, b) => {
             const distA =
               a.driverProfile?.currentLat && a.driverProfile?.currentLng
                 ? calculateDistanceKm(
-                    emergency.pickupLat!,
-                    emergency.pickupLng!,
+                    emergency.pickupLatitude!,
+                    emergency.pickupLongitude!,
                     a.driverProfile.currentLat,
                     a.driverProfile.currentLng
                   )
@@ -101,8 +101,8 @@ export class TripService {
             const distB =
               b.driverProfile?.currentLat && b.driverProfile?.currentLng
                 ? calculateDistanceKm(
-                    emergency.pickupLat!,
-                    emergency.pickupLng!,
+                    emergency.pickupLatitude!,
+                    emergency.pickupLongitude!,
                     b.driverProfile.currentLat,
                     b.driverProfile.currentLng
                   )
@@ -160,14 +160,14 @@ export class TripService {
       // 5. Create initial TripStatusLog with distance & ETA calculation
       let dispatchNote = `Unit ${ambulance.plateNumber} dispatched by ${actor.role}`;
       if (
-        emergency.pickupLat &&
-        emergency.pickupLng &&
+        emergency.pickupLatitude &&
+        emergency.pickupLongitude &&
         ambulance.driverProfile.currentLat &&
         ambulance.driverProfile.currentLng
       ) {
         const dist = calculateDistanceKm(
-          emergency.pickupLat,
-          emergency.pickupLng,
+          emergency.pickupLatitude,
+          emergency.pickupLongitude,
           ambulance.driverProfile.currentLat,
           ambulance.driverProfile.currentLng
         );

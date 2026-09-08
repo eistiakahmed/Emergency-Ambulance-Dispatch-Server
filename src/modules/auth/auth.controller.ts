@@ -54,7 +54,7 @@ export class AuthController {
     try {
       const refreshToken = req.body.refreshToken || req.cookies?.refreshToken;
       const result = await AuthService.refreshToken(refreshToken);
-      res.cookie('refreshToken', result.refreshToken, {
+      res.cookie('refreshToken', result.tokens.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
