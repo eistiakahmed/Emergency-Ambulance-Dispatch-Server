@@ -57,6 +57,13 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional().default(''),
   STRIPE_WEBHOOK_SECRET: z.string().optional().default(''),
 
+  BKASH_BASE_URL: z.string().default(''),
+  BKASH_APP_KEY: z.string().optional().default(''),
+  BKASH_APP_SECRET: z.string().optional().default(''),
+  BKASH_USERNAME: z.string().optional().default(''),
+  BKASH_PASSWORD: z.string().optional().default(''),
+  BKASH_CALLBACK_URL: z.string().default(''),
+
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
 });

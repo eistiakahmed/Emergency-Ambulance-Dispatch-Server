@@ -4,6 +4,10 @@ import { ApiResponse } from '../../common/responses/ApiResponse.js';
 import { PaymentService } from './payment.service.js';
 
 export class PaymentController {
+  // ==============================================================================
+  // Stripe Controllers
+  // ==============================================================================
+
   static async initiate(req: Request, res: Response, next: NextFunction) {
     try {
       const { tripId, successUrl, cancelUrl } = req.body;
@@ -32,6 +36,78 @@ export class PaymentController {
       next(error);
     }
   }
+
+  // ==============================================================================
+  // bKash Controllers
+  // ==============================================================================
+
+  static async initiateBkash(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { tripId, payerReference, callbackURL, agreementID } = req.body;
+      const result = await PaymentService.initiateBkashPayment(tripId, req.user!, {
+        payerReference,
+        callbackURL,
+        agreementID,
+      });
+      return ApiResponse.created(res, result, 'bKash payment session initialized successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async executeBkash(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { paymentID } = req.body;
+      const result = await PaymentService.executeBkashPayment(paymentID);
+      return ApiResponse.success(res, result, 'bKash payment executed and confirmed successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async bkashCallback(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { paymentID, status, signature } = req.query as {
+        paymentID: string;
+        status: string;
+        signature?: string;
+      };
+
+      const result = await PaymentService.handleBkashCallback({
+        paymentID,
+        status,
+        signature,
+      });
+
+      return ApiResponse.success(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async queryBkashStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { paymentId } = req.params;
+      const result = await PaymentService.queryBkashPaymentStatus(paymentId as string);
+      return ApiResponse.success(res, result, 'bKash payment status retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async captureBkash(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { paymentId } = req.params;
+      const result = await PaymentService.captureBkashPayment(paymentId as string);
+      return ApiResponse.success(res, result, 'bKash payment captured successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==============================================================================
+  // Shared Query Controllers
+  // ==============================================================================
 
   static async getById(req: Request, res: Response, next: NextFunction) {
     try {

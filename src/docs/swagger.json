@@ -249,6 +249,37 @@
         "responses": { "200": { "description": "Success" } }
       }
     },
+    "/payments/bkash/initiate": {
+      "post": {
+        "summary": "Initiate bKash tokenized payment session for completed trip",
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/payments/bkash/execute": {
+      "post": {
+        "summary": "Execute and finalize bKash payment with paymentID",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/payments/bkash/callback": {
+      "get": {
+        "summary": "bKash payment gateway redirect callback handler",
+        "security": [],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/payments/bkash/status/{paymentId}": {
+      "get": {
+        "summary": "Query payment status from bKash gateway",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/payments/bkash/capture/{paymentId}": {
+      "post": {
+        "summary": "Confirm / Capture authorized bKash payment (Admin)",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
     "/payments/trip/{tripId}": {
       "get": {
         "summary": "Get payment by trip ID",

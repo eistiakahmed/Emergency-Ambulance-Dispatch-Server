@@ -6,14 +6,6 @@ export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await AuthService.register(req.body);
-      if (result.tokens?.refreshToken) {
-        res.cookie('refreshToken', result.tokens.refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        });
-      }
       return ApiResponse.created(
         res,
         result,
@@ -54,6 +46,14 @@ export class AuthController {
     } catch (error) {
       next(error);
     }
+  }
+
+  static async getGoogleClientId(_req: Request, res: Response) {
+    return ApiResponse.success(
+      res,
+      { clientId: process.env.GOOGLE_CLIENT_ID || '' },
+      'Google Client ID retrieved'
+    );
   }
 
   static async refreshToken(req: Request, res: Response, next: NextFunction) {

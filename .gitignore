@@ -36,3 +36,11 @@ Thumbs.db
 .vscode/
 .idea/
 .agents
+tests/
+uploads/
+Emergency_Ambulance_API.postman_collection.json
+vitest.config.ts
+docker-compose.yml
+Dockerfile
+.dockerignore
+.github/

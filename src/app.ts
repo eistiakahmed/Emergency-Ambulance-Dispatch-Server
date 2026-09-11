@@ -23,10 +23,20 @@ import userRoutes from './modules/users/user.routes.js';
 export const app = express();
 
 // 1. Security & Core Middlewares
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginOpenerPolicy: false,
+  })
+);
 app.use(
   cors({
-    origin: env.CLIENT_URL || '*',
+    origin: (origin, callback) => {
+      if (!origin || env.NODE_ENV === 'development') {
+        return callback(null, true);
+      }
+      return callback(null, origin === env.CLIENT_URL);
+    },
     credentials: true,
   })
 );
@@ -47,9 +57,13 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 4. Rate Limiter & Static Uploads
+// 4. Rate Limiter & Static Folders
 app.use(globalRateLimiter);
 app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+app.use(express.static(join(process.cwd(), 'public')));
+app.get('/demo-auth', (_req: Request, res: Response) => {
+  res.sendFile(join(process.cwd(), 'public/demo-auth.html'));
+});
 
 // 5. Swagger Interactive API Documentation
 try {

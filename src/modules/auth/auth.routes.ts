@@ -32,6 +32,8 @@ router.post(
   AuthController.googleLogin
 );
 
+router.get('/google-client-id', AuthController.getGoogleClientId);
+
 router.post('/refresh-token', validate({ body: refreshTokenSchema }), AuthController.refreshToken);
 
 router.post('/logout', AuthController.logout);

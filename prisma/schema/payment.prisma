@@ -10,6 +10,8 @@ model Payment {
   status                PaymentStatus   @default(PENDING)
   stripeSessionId       String?         @unique
   stripePaymentIntentId String?         @unique
+  bkashPaymentId        String?         @unique
+  bkashTrxId            String?         @unique
   transactionReference  String?         @unique
   receiptUrl            String?
   paidAt                DateTime?

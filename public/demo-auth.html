@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emergency Dispatch • OAuth 2.0 Auth Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --bg-base: #090d16;
+      --bg-surface: rgba(15, 23, 42, 0.78);
+      --bg-surface-subtle: rgba(30, 41, 59, 0.45);
+      --bg-surface-elevated: rgba(30, 41, 59, 0.7);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(255, 255, 255, 0.16);
+      --border-active: rgba(14, 165, 233, 0.4);
+      --primary: #0ea5e9;
+      --primary-hover: #0284c7;
+      --primary-glow: rgba(14, 165, 233, 0.22);
+      --emergency-red: #f43f5e;
+      --emergency-red-glow: rgba(244, 63, 94, 0.25);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-base);
+      background-image: 
+        radial-gradient(circle at 50% -10%, rgba(14, 165, 233, 0.14) 0%, transparent 60%),
+        radial-gradient(circle at 95% 90%, rgba(244, 63, 94, 0.06) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 20px 60px;
+      position: relative;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 2;
+    }
+
+    /* Top Banner / Compliance Notification */
+    .origin-banner {
+      display: none;
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: #fecdd3;
+      backdrop-filter: blur(12px);
+      line-height: 1.5;
+    }
+
+    .origin-banner strong {
+      color: #fff;
+    }
+
+    .origin-banner a {
+      color: #38bdf8;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* Top Navigation / Brand Header */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: var(--bg-surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 10px 35px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-symbol {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 24px var(--emergency-red-glow);
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .brand-meta h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-env {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: rgba(14, 165, 233, 0.12);
+      color: #38bdf8;
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+    }
+
+    .brand-meta p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .server-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: rgba(15, 23, 42, 0.6);
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .status-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+      position: relative;
+    }
+
+    .status-pulse::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 1px solid var(--success);
+      opacity: 0.4;
+      animation: pulseAnim 2s infinite ease-out;
+    }
+
+    @keyframes pulseAnim {
+      0% { transform: scale(0.8); opacity: 0.8; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 32px 32px;
+      box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-header-bar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .card-title-group h2 {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title-group p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      line-height: 1.55;
+    }
+
+    /* Modern Role Selector */
+    .section-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .role-choice {
+      cursor: pointer;
+      position: relative;
+    }
+
+    .role-choice input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .role-card {
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .role-choice:hover .role-card {
+      background: rgba(30, 41, 59, 0.65);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+    }
+
+    .role-choice input:checked + .role-card {
+      border-color: var(--primary);
+      background: rgba(14, 165, 233, 0.08);
+      box-shadow: 0 0 20px var(--primary-glow), inset 0 0 0 1px var(--primary);
+    }
+
+    .role-icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .role-choice input:checked + .role-card .role-icon-box {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .role-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .role-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Auth Action Box */
+    .auth-action-box {
+      background: rgba(11, 16, 28, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    #googleButtonContainer {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .security-guarantee {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    /* Collapsible Dev Tools Accordion */
+    .dev-accordion {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.35);
+      overflow: hidden;
+    }
+
+    .dev-accordion-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 500;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .dev-accordion-toggle:hover {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-main);
+    }
+
+    .dev-accordion-toggle svg.chevron {
+      transition: transform 0.2s ease;
+    }
+
+    .dev-accordion-toggle.active svg.chevron {
+      transform: rotate(180deg);
+    }
+
+    .dev-accordion-content {
+      display: none;
+      padding: 16px;
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(9, 13, 22, 0.6);
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .client-id-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .client-id-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 540px;
+    }
+
+    .btn-copy-subtle {
+      background: transparent;
+      border: none;
+      color: #38bdf8;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+
+    .btn-copy-subtle:hover {
+      background: rgba(14, 165, 233, 0.15);
+    }
+
+    .textarea-field {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      color: var(--text-main);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .textarea-field:focus {
+      border-color: var(--primary);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border-subtle);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--border-hover);
+    }
+
+    .btn-danger {
+      background: rgba(244, 63, 94, 0.1);
+      border-color: rgba(244, 63, 94, 0.3);
+      color: #fda4af;
+    }
+
+    .btn-danger:hover {
+      background: rgba(244, 63, 94, 0.2);
+      border-color: var(--emergency-red);
+      color: #fff;
+    }
+
+    /* Authenticated Session Dashboard */
+    .session-dashboard {
+      display: none;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .user-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(30, 41, 59, 0.4) 100%);
+      border: 1px solid var(--border-active);
+      border-radius: var(--radius-md);
+      padding: 20px 24px;
+    }
+
+    .user-info-side {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-avatar-ring {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      padding: 2px;
+      background: linear-gradient(135deg, var(--primary), var(--emergency-red));
+      flex-shrink: 0;
+    }
+
+    .user-avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #1e293b;
+    }
+
+    .user-avatar-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 18px;
+      height: 18px;
+      background: var(--success);
+      border: 2px solid var(--bg-base);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .user-meta-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-meta-email {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .badge-role {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+    }
+
+    .badge-patient {
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.35);
+      color: #38bdf8;
+    }
+
+    .badge-driver {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #fb7185;
+    }
+
+    /* Tabbed Token Inspector */
+    .token-inspector-card {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: rgba(11, 16, 28, 0.85);
+      overflow: hidden;
+    }
+
+    .tab-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(15, 23, 42, 0.8);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .tab-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: #fff;
+      background: rgba(14, 165, 233, 0.2);
+      border: 1px solid rgba(14, 165, 233, 0.4);
+    }
+
+    .token-content-box {
+      padding: 16px;
+    }
+
+    .token-text-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.6;
+      color: #93c5fd;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      word-break: break-all;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    /* Actions Ribbon */
+    .session-actions-ribbon {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Live API Response Terminal */
+    .api-terminal-card {
+      display: none;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: #060910;
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #0d121f;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .terminal-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .status-pill.success {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-pill.error {
+      background: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .terminal-output {
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.55;
+      color: #cbd5e1;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Floating Toast Alerts */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 420px;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      line-height: 1.45;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .toast-info {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      color: #e0f2fe;
+    }
+
+    .toast-success {
+      background: rgba(6, 44, 34, 0.92);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #d1fae5;
+    }
+
+    .toast-error {
+      background: rgba(60, 10, 20, 0.92);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #ffe4e6;
+    }
+
+    /* Footer */
+    .app-footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .card { padding: 22px 18px; }
+      .role-grid { grid-template-columns: 1fr; }
+      .user-banner { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .session-actions-ribbon { flex-direction: column; width: 100%; }
+      .session-actions-ribbon .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Floating Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="container">
+    <!-- Origin Port / Domain Notice -->
+    <div class="origin-banner" id="originNoticeBanner"></div>
+
+    <!-- Header Navigation -->
+    <header class="app-header">
+      <div class="brand-group">
+        <div class="brand-symbol">
+          <!-- Emergency Cross / Star of Life SVG -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M2 12h20M7 7l10 10M17 7L7 17"></path>
+          </svg>
+        </div>
+        <div class="brand-meta">
+          <h1>
+            Emergency Dispatch
+            <span class="badge-env">OAuth Lab</span>
+          </h1>
+          <p>Google Identity Services • Production Gateway Testbed</p>
+        </div>
+      </div>
+      <div class="server-status">
+        <span class="status-pulse"></span>
+        <span id="serverStatusText">Port 5000 Active</span>
+      </div>
+    </header>
+
+    <!-- Login Setup Card -->
+    <main class="card" id="loginCard">
+      <div class="card-header-bar">
+        <div class="card-title-group">
+          <h2>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10 17 15 12 10 7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+            Single Sign-On Authentication
+          </h2>
+          <p>
+            Choose your target dispatch role below. Google credential token is authenticated server-side via <code>POST /api/v1/auth/google</code> and exchanged for system JWT credentials.
+          </p>
+        </div>
+      </div>
+
+      <!-- Role Selector -->
+      <span class="section-label">Select Dispatch Persona</span>
+      <div class="role-grid">
+        <label class="role-choice">
+          <input type="radio" name="role" value="PATIENT" checked />
+          <div class="role-card">
+            <div class="role-icon-box">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div>
+              <div class="role-title">Patient</div>
+              <div class="role-desc">Book ambulance & live emergency tracking</div>
+            </div>
+          </div>
+        </label>
+
+        <label class="role-choice">
+          <input type="radio" name="role" value="DRIVER" />
+          <div class="role-card">
+            <div class="role-icon-box">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="3" width="15" height="13"></rect>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
+            </div>
+            <div>
+              <div class="role-title">Ambulance Driver</div>
+              <div class="role-desc">Accept dispatch calls & GPS navigation</div>
+            </div>
+          </div>
+        </label>
+      </div>
+
+      <!-- Google Sign In Button Box -->
+      <div class="auth-action-box">
+        <div id="googleButtonContainer">
+          <span style="font-size:13px; color:var(--text-muted);">Initializing Google Identity Services...</span>
+        </div>
+        <div class="security-guarantee">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Encrypted TLS • Verified by Google OAuth 2.0
+        </div>
+      </div>
+
+      <!-- Collapsible Developer Diagnostics -->
+      <div class="dev-accordion">
+        <button type="button" class="dev-accordion-toggle" onclick="toggleDevAccordion(this)">
+          <span style="display:flex; align-items:center; gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            Developer Diagnostics & Manual Token Bypass
+          </span>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+
+        <div class="dev-accordion-content" id="devAccordionContent">
+          <div class="client-id-bar">
+            <span class="client-id-text" id="clientIdDisplay">Loading Client ID...</span>
+            <button class="btn-copy-subtle" onclick="copyClientId()">Copy ID</button>
+          </div>
+          <div>
+            <textarea id="manualIdToken" class="textarea-field" rows="3" placeholder="Or paste raw Google idToken here for direct debugging..."></textarea>
+          </div>
+          <div style="display:flex; justify-content:flex-end;">
+            <button class="btn btn-secondary" onclick="submitManualToken()" style="padding: 8px 14px; font-size:12.5px;">
+              Authenticate Pasted Token
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Authenticated Session Dashboard -->
+    <div class="card session-dashboard" id="sessionPanel">
+      <div class="card-header-bar" style="margin-bottom: 0;">
+        <div class="card-title-group">
+          <h2>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Authenticated Session Active
+          </h2>
+          <p>System JWT access credentials granted and stored in memory.</p>
+        </div>
+        <button class="btn btn-danger" onclick="logoutSession()" style="padding: 8px 14px; font-size:12.5px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Sign Out
+        </button>
+      </div>
+
+      <!-- User Profile Header -->
+      <div class="user-banner">
+        <div class="user-info-side">
+          <div class="user-avatar-ring">
+            <img id="userAvatar" class="user-avatar-img" src="" alt="User Avatar" />
+            <div class="user-avatar-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div>
+            <div class="user-meta-name">
+              <span id="userName">User Name</span>
+              <span class="badge-role badge-patient" id="userRoleBadge">PATIENT</span>
+            </div>
+            <div class="user-meta-email" id="userEmail">user@example.com</div>
+          </div>
+        </div>
+        <div style="font-size:11px; color:var(--text-dim); font-family:'JetBrains Mono',monospace;">
+          UID: <span id="userId" style="color:var(--text-muted);">...</span>
+        </div>
+      </div>
+
+      <!-- Tabbed Token Inspector -->
+      <div class="token-inspector-card">
+        <div class="tab-header">
+          <div class="tab-buttons">
+            <button class="tab-btn active" id="tabBtnAccess" onclick="switchTokenTab('access')">
+              Access Token (Bearer)
+            </button>
+            <button class="tab-btn" id="tabBtnRefresh" onclick="switchTokenTab('refresh')">
+              Refresh Token
+            </button>
+          </div>
+          <button class="btn-copy-subtle" onclick="copyCurrentTabToken()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 4px;">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy Token
+          </button>
+        </div>
+        <div class="token-content-box">
+          <div class="token-text-display" id="activeTokenDisplay">No token active</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="session-actions-ribbon">
+        <button class="btn btn-primary" onclick="testVerifyMeApi()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Verify Protected API (/api/v1/users/me)
+        </button>
+        <button class="btn btn-secondary" onclick="testRefreshTokenApi()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Test Refresh Token
+        </button>
+      </div>
+
+      <!-- Live API Response Terminal -->
+      <div class="api-terminal-card" id="apiResponseBox">
+        <div class="terminal-header">
+          <div class="terminal-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span id="apiResponseTitle">GET /api/v1/users/me</span>
+          </div>
+          <span class="status-pill success" id="apiResponseStatus">200 OK</span>
+        </div>
+        <pre class="terminal-output"><code id="apiResponseContent"></code></pre>
+      </div>
+    </div>
+
+    <!-- Minimalist Footer -->
+    <footer class="app-footer">
+      Emergency Ambulance Dispatch System • v1.0 Enterprise
+    </footer>
+  </div>
+
+  <script>
+    // Intelligent Backend URL resolution
+    const BACKEND_URL = (window.location.protocol.startsWith('http') && window.location.port === '5000')
+      ? ''
+      : 'http://localhost:5000';
+
+    const FALLBACK_CLIENT_ID = '237988043788-0sml3h7cegsn98bvgbav62eaeare3igc.apps.googleusercontent.com';
+
+    // Global Application State
+    let currentAuthTokens = {
+      accessToken: null,
+      refreshToken: null
+    };
+    let currentActiveTab = 'access';
+    let currentGoogleClientId = null;
+
+    // Toast Notification System
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+
+      const iconSvg = type === 'success' 
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"></polyline></svg>`
+        : type === 'error'
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--emergency-red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+
+      toast.innerHTML = `${iconSvg}<div>${message}</div>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.2s, transform 0.2s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-8px)';
+        setTimeout(() => toast.remove(), 220);
+      }, duration);
+    }
+
+    function getSelectedRole() {
+      const selected = document.querySelector('input[name="role"]:checked');
+      return selected ? selected.value : 'PATIENT';
+    }
+
+    function toggleDevAccordion(btn) {
+      btn.classList.toggle('active');
+      const content = document.getElementById('devAccordionContent');
+      content.style.display = content.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function copyClientId() {
+      if (!currentGoogleClientId) return;
+      navigator.clipboard.writeText(currentGoogleClientId).then(() => {
+        showToast('Google Client ID copied to clipboard', 'info');
+      });
+    }
+
+    function switchTokenTab(tab) {
+      currentActiveTab = tab;
+      const btnAccess = document.getElementById('tabBtnAccess');
+      const btnRefresh = document.getElementById('tabBtnRefresh');
+      const display = document.getElementById('activeTokenDisplay');
+
+      if (tab === 'access') {
+        btnAccess.classList.add('active');
+        btnRefresh.classList.remove('active');
+        display.textContent = currentAuthTokens.accessToken || 'No active access token';
+      } else {
+        btnAccess.classList.remove('active');
+        btnRefresh.classList.add('active');
+        display.textContent = currentAuthTokens.refreshToken || 'No active refresh token';
+      }
+    }
+
+    function copyCurrentTabToken() {
+      const display = document.getElementById('activeTokenDisplay');
+      const token = display.textContent;
+      if (!token || token.startsWith('No active')) return;
+      navigator.clipboard.writeText(token).then(() => {
+        showToast('Token copied to clipboard!', 'success', 2500);
+      });
+    }
+
+    // Origin Compliance Verification
+    function verifyOriginCompliance() {
+      const banner = document.getElementById('originNoticeBanner');
+      if (window.location.protocol === 'file:') {
+        banner.innerHTML = '<strong>Notice:</strong> You opened this file via <code>file:///</code>. Google Identity Services requires an authorized HTTP origin. Open via <a href="http://localhost:5000/demo-auth">http://localhost:5000/demo-auth</a>';
+        banner.style.display = 'block';
+        return;
+      }
+      if (window.location.port !== '5000') {
+        banner.innerHTML = `<strong>Notice:</strong> Running on port <code>:${window.location.port || '80'}</code>. Backend is targeting <code>http://localhost:5000</code>. For Google OAuth origin match, visit <a href="http://localhost:5000/demo-auth">http://localhost:5000/demo-auth</a>.`;
+        banner.style.display = 'block';
+      }
+    }
+
+    // 1. Fetch Google Client ID from backend or fallback gracefully
+    async function loadGoogleClientId() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/v1/auth/google-client-id`);
+        const contentType = res.headers.get('content-type') || '';
+        
+        if (res.ok && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data.success && data.data && data.data.clientId) {
+            currentGoogleClientId = data.data.clientId;
+            document.getElementById('clientIdDisplay').textContent = `Client ID: ${currentGoogleClientId}`;
+            initializeGoogleSignIn();
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Backend fetch failed, falling back to embedded Client ID:', err);
+      }
+
+      currentGoogleClientId = FALLBACK_CLIENT_ID;
+      document.getElementById('clientIdDisplay').textContent = `Client ID: ${currentGoogleClientId}`;
+      initializeGoogleSignIn();
+    }
+
+    // 2. Initialize Google Identity Services SDK
+    function initializeGoogleSignIn() {
+      if (!window.google || !window.google.accounts) {
+        setTimeout(initializeGoogleSignIn, 300);
+        return;
+      }
+
+      try {
+        google.accounts.id.initialize({
+          client_id: currentGoogleClientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        const btnContainer = document.getElementById('googleButtonContainer');
+        btnContainer.innerHTML = '';
+
+        google.accounts.id.renderButton(btnContainer, {
+          theme: 'filled_blue',
+          size: 'large',
+          text: 'continue_with',
+          shape: 'pill',
+          width: 280,
+          logo_alignment: 'left'
+        });
+
+        google.accounts.id.prompt();
+      } catch (e) {
+        console.error('GSI Init Error:', e);
+        showToast('Error initializing Google Sign-In SDK: ' + e.message, 'error');
+      }
+    }
+
+    // 3. Callback from Google Credential Prompt / Button
+    async function handleGoogleCredentialResponse(response) {
+      const idToken = response.credential;
+      if (!idToken) {
+        showToast('No credential token received from Google.', 'error');
+        return;
+      }
+      await performGoogleAuth(idToken);
+    }
+
+    // 4. Authenticate with backend: POST /api/v1/auth/google
+    async function performGoogleAuth(idToken) {
+      const role = getSelectedRole();
+      showToast(`Verifying Google token with backend as ${role}...`, 'info');
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/v1/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken, role })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          showToast(`Welcome back, ${result.data.user.name}!`, 'success');
+          renderAuthenticatedSession(result.data);
+        } else {
+          showToast(`Authentication failed (${response.status}): ${result.message || 'Unknown error'}`, 'error', 6000);
+        }
+      } catch (err) {
+        showToast('Network error communicating with auth server: ' + err.message, 'error');
+      }
+    }
+
+    // Manual token submit helper
+    async function submitManualToken() {
+      const token = document.getElementById('manualIdToken').value.trim();
+      if (!token) {
+        showToast('Please enter an idToken before submitting.', 'error');
+        return;
+      }
+      await performGoogleAuth(token);
+    }
+
+    // 5. Render Authenticated Session
+    function renderAuthenticatedSession(authData) {
+      const { user, tokens } = authData;
+      currentAuthTokens = tokens;
+
+      document.getElementById('userName').textContent = user.name || 'Anonymous User';
+      document.getElementById('userEmail').textContent = user.email || 'N/A';
+      document.getElementById('userId').textContent = user.id || 'N/A';
+      
+      const roleBadge = document.getElementById('userRoleBadge');
+      roleBadge.textContent = user.role;
+      roleBadge.className = `badge-role ${user.role === 'DRIVER' ? 'badge-driver' : 'badge-patient'}`;
+
+      const avatar = document.getElementById('userAvatar');
+      avatar.src = user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=0284c7&color=fff`;
+
+      switchTokenTab(currentActiveTab);
+
+      // Transition views
+      document.getElementById('loginCard').style.display = 'none';
+      const sessionPanel = document.getElementById('sessionPanel');
+      sessionPanel.style.display = 'flex';
+      document.getElementById('apiResponseBox').style.display = 'none';
+    }
+
+    // 6. Test Protected Route: GET /api/v1/users/me
+    async function testVerifyMeApi() {
+      if (!currentAuthTokens.accessToken) {
+        showToast('No access token available. Please sign in first.', 'error');
+        return;
+      }
+
+      showToast('Calling GET /api/v1/users/me...', 'info');
+      const start = performance.now();
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/v1/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${currentAuthTokens.accessToken}`
+          }
+        });
+
+        const duration = Math.round(performance.now() - start);
+        const data = await res.json();
+
+        const box = document.getElementById('apiResponseBox');
+        const title = document.getElementById('apiResponseTitle');
+        const status = document.getElementById('apiResponseStatus');
+        const content = document.getElementById('apiResponseContent');
+
+        title.textContent = `GET /api/v1/users/me (${duration}ms)`;
+        status.textContent = `${res.status} ${res.statusText}`;
+        status.className = `status-pill ${res.ok ? 'success' : 'error'}`;
+        content.textContent = JSON.stringify(data, null, 2);
+        box.style.display = 'block';
+
+        if (res.ok) {
+          showToast('Protected API /api/v1/users/me verified successfully!', 'success');
+        } else {
+          showToast(`Protected request rejected (${res.status}): ${data.message}`, 'error');
+        }
+      } catch (err) {
+        showToast('Failed to call /api/v1/users/me: ' + err.message, 'error');
+      }
+    }
+
+    // 7. Test Refresh Token: POST /api/v1/auth/refresh-token
+    async function testRefreshTokenApi() {
+      if (!currentAuthTokens.refreshToken) {
+        showToast('No refresh token available.', 'error');
+        return;
+      }
+
+      showToast('Refreshing session token...', 'info');
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/v1/auth/refresh-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: currentAuthTokens.refreshToken })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          currentAuthTokens.accessToken = data.data.accessToken;
+          switchTokenTab(currentActiveTab);
+          showToast('Session tokens rotated successfully!', 'success');
+        } else {
+          showToast(`Token rotation failed (${res.status}): ${data.message}`, 'error');
+        }
+      } catch (err) {
+        showToast('Failed to refresh token: ' + err.message, 'error');
+      }
+    }
+
+    // 8. Logout
+    function logoutSession() {
+      currentAuthTokens = { accessToken: null, refreshToken: null };
+      document.getElementById('sessionPanel').style.display = 'none';
+      document.getElementById('loginCard').style.display = 'block';
+      showToast('Session cleared. Ready to authenticate again.', 'info');
+      if (window.google && window.google.accounts) {
+        google.accounts.id.disableAutoSelect();
+      }
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      verifyOriginCompliance();
+      loadGoogleClientId();
+    });
+  </script>
+</body>
+</html>
