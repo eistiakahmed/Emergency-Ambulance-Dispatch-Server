@@ -1,4 +1,4 @@
-# 🚑 Emergency Ambulance Dispatch System — Enterprise REST API
+# Emergency Ambulance Dispatch System - Enterprise REST API
 
 [![CI Pipeline](https://github.com/eistiakahmed/Emergency-Ambulance-Dispatch-Server/actions/workflows/ci.yml/badge.svg)](https://github.com/eistiakahmed/Emergency-Ambulance-Dispatch-Server/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
