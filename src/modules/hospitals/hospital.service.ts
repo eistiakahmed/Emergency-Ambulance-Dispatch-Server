@@ -26,12 +26,21 @@ export class HospitalService {
   static async listHospitals(query: any) {
     const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(query);
     const search = query.search as string | undefined;
-    const hasIcu = query.hasIcu !== undefined ? query.hasIcu === 'true' : undefined;
-    const minBeds = query.minBeds ? parseInt(query.minBeds as string, 10) : undefined;
+    const hasIcu =
+      query.hasIcu !== undefined
+        ? query.hasIcu === 'true' || query.hasIcu === true
+        : undefined;
+    const minIcuBeds = query.minIcuBeds
+      ? parseInt(query.minIcuBeds as string, 10)
+      : undefined;
+    const minBeds = query.minBeds
+      ? parseInt(query.minBeds as string, 10)
+      : undefined;
 
     const where: any = {
       deletedAt: null,
       ...(hasIcu !== undefined ? { hasIcu } : {}),
+      ...(minIcuBeds !== undefined ? { icuBedsAvailable: { gte: minIcuBeds } } : {}),
       ...(minBeds !== undefined ? { emergencyBedsAvailable: { gte: minBeds } } : {}),
       ...(search
         ? {
@@ -43,7 +52,7 @@ export class HospitalService {
         : {}),
     };
 
-    const [total, hospitals] = await Promise.all([
+    const [total, rawHospitals] = await Promise.all([
       prisma.hospital.count({ where }),
       prisma.hospital.findMany({
         where,
@@ -52,6 +61,14 @@ export class HospitalService {
         orderBy: { [sortBy]: sortOrder },
       }),
     ]);
+
+    const hospitals = rawHospitals.map((h) => ({
+      ...h,
+      availableIcuBeds: h.icuBedsAvailable,
+      availableGeneralBeds: h.emergencyBedsAvailable,
+      totalGeneralBeds: h.emergencyBedsTotal,
+      contactNumber: h.contactPhone,
+    }));
 
     return buildPaginatedResponse(hospitals, total, page, limit);
   }

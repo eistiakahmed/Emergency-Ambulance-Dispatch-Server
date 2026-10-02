@@ -37,15 +37,30 @@ export class AmbulanceService {
 
   static async listAmbulances(query: any) {
     const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(query);
-    const vehicleType = query.vehicleType as any;
+    const rawType = (query.vehicleType || query.type) as string | undefined;
+    const vehicleType =
+      rawType === 'ALS'
+        ? 'ADVANCED_LIFE_SUPPORT'
+        : rawType === 'BLS'
+        ? 'BASIC_LIFE_SUPPORT'
+        : (rawType as any);
+
     const isOperational =
       query.isOperational !== undefined ? query.isOperational === 'true' : undefined;
+    const status = query.status as string | undefined;
     const search = query.search as string | undefined;
 
     const where: any = {
       deletedAt: null,
       ...(vehicleType ? { vehicleType } : {}),
       ...(isOperational !== undefined ? { isOperational } : {}),
+      ...(status
+        ? {
+            driverProfile: {
+              status,
+            },
+          }
+        : {}),
       ...(search
         ? {
             OR: [
@@ -56,7 +71,7 @@ export class AmbulanceService {
         : {}),
     };
 
-    const [total, ambulances] = await Promise.all([
+    const [total, rawAmbulances] = await Promise.all([
       prisma.ambulance.count({ where }),
       prisma.ambulance.findMany({
         where,
@@ -72,6 +87,24 @@ export class AmbulanceService {
         },
       }),
     ]);
+
+    const ambulances = rawAmbulances.map((amb) => ({
+      ...amb,
+      vehicleNumber: amb.plateNumber,
+      type: amb.vehicleType,
+      status: amb.driverProfile?.status || (amb.isOperational ? 'AVAILABLE' : 'OFFLINE'),
+      baseLatitude: amb.driverProfile?.currentLat || 23.8103,
+      baseLongitude: amb.driverProfile?.currentLng || 90.4125,
+      driver: amb.driverProfile
+        ? {
+            id: amb.driverProfile.id,
+            name: amb.driverProfile.user?.name,
+            phone: amb.driverProfile.user?.phone,
+            licenseNumber: amb.driverProfile.licenseNumber,
+            status: amb.driverProfile.status,
+          }
+        : null,
+    }));
 
     return buildPaginatedResponse(ambulances, total, page, limit);
   }

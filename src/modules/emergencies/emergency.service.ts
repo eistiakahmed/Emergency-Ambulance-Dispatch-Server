@@ -52,7 +52,7 @@ export class EmergencyService {
       ...(status ? { status } : {}),
     };
 
-    const [total, emergencies] = await Promise.all([
+    const [total, rawEmergencies] = await Promise.all([
       prisma.emergencyRequest.count({ where }),
       prisma.emergencyRequest.findMany({
         where,
@@ -72,6 +72,14 @@ export class EmergencyService {
         },
       }),
     ]);
+
+    const emergencies = rawEmergencies.map((e) => ({
+      ...e,
+      severityLevel: e.priority,
+      emergencyType: e.symptoms?.includes(':')
+        ? e.symptoms.split(':')[0].trim()
+        : 'GENERAL',
+    }));
 
     return buildPaginatedResponse(emergencies, total, page, limit);
   }
