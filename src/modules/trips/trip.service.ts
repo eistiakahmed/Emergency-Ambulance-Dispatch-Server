@@ -3,6 +3,7 @@ import { BadRequestError, NotFoundError } from '../../common/errors/AppError.js'
 import { EmailService } from '../../common/services/email.service.js';
 import { logAuditEvent } from '../../common/utils/auditLogger.js';
 import { calculateDistanceKm, calculateEtaMinutes } from '../../common/utils/geo.js';
+import { buildPaginatedResponse, parsePaginationParams } from '../../common/utils/pagination.js';
 import { FARE_CONFIG } from '../../config/constants.js';
 import { prisma } from '../../config/prisma.js';
 
@@ -504,5 +505,78 @@ export class TripService {
 
       return updatedTrip;
     });
+  }
+
+  static async listTrips(query: any, user: { id: string; role: string }) {
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(query);
+    const status = query.status as string | undefined;
+
+    const where: any = {
+      deletedAt: null,
+      ...(status ? { status } : {}),
+    };
+
+    if (user.role === 'PATIENT') {
+      where.emergencyRequest = { patientId: user.id };
+    } else if (user.role === 'DRIVER') {
+      const driver = await prisma.driverProfile.findUnique({ where: { userId: user.id } });
+      if (driver) {
+        where.driverProfileId = driver.id;
+      }
+    } else if (user.role === 'ADMIN') {
+      if (query.patientId) {
+        where.emergencyRequest = { patientId: query.patientId };
+      }
+      if (query.driverId) {
+        where.driverProfileId = query.driverId;
+      }
+    }
+
+    const [total, rawTrips] = await Promise.all([
+      prisma.trip.count({ where }),
+      prisma.trip.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          ambulance: true,
+          driverProfile: {
+            include: { user: { select: { name: true, phone: true, email: true } } },
+          },
+          emergencyRequest: {
+            include: {
+              destinationHospital: true,
+              patient: { select: { name: true, phone: true, email: true } },
+            },
+          },
+          hospital: true,
+          payment: true,
+        },
+      }),
+    ]);
+
+    const trips = rawTrips.map((trip) => ({
+      ...trip,
+      ambulance: trip.ambulance
+        ? {
+            ...trip.ambulance,
+            vehicleNumber: trip.ambulance.plateNumber,
+            type: trip.ambulance.vehicleType,
+          }
+        : null,
+      driver: trip.driverProfile
+        ? {
+            id: trip.driverProfile.id,
+            name: trip.driverProfile.user?.name,
+            phone: trip.driverProfile.user?.phone,
+            licenseNumber: trip.driverProfile.licenseNumber,
+          }
+        : null,
+      emergency: trip.emergencyRequest,
+      hospital: trip.hospital || trip.emergencyRequest?.destinationHospital,
+    }));
+
+    return buildPaginatedResponse(trips, total, page, limit);
   }
 }

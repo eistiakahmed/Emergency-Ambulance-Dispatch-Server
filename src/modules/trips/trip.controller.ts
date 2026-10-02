@@ -12,6 +12,15 @@ export class TripController {
     }
   }
 
+  static async list(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await TripService.listTrips(req.query, req.user!);
+      return ApiResponse.success(res, result.data, 'Trips retrieved successfully', 200, result.meta);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getActiveTrip(req: Request, res: Response, next: NextFunction) {
     try {
       const trip = await TripService.getActiveTrip(req.user!);

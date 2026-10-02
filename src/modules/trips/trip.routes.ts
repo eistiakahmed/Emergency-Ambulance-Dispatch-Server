@@ -24,6 +24,9 @@ router.post(
 // Active trip for driver or patient
 router.get('/active', TripController.getActiveTrip);
 
+// List trips (Patient personal history, Driver shift history, Admin overview)
+router.get('/', TripController.list);
+
 // Get trip by ID
 router.get('/:id', TripController.getById);
 
