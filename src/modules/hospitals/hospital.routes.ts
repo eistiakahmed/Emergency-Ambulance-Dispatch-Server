@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../../common/middlewares/auth.middleware.js';
+import { authenticate, optionalAuthenticate } from '../../common/middlewares/auth.middleware.js';
 import { requireRoles } from '../../common/middlewares/role.middleware.js';
 import { validate } from '../../common/middlewares/validate.middleware.js';
 import { HospitalController } from './hospital.controller.js';
@@ -12,8 +12,8 @@ import {
 const router = Router();
 
 // Public / Authenticated read access
-router.get('/', authenticate, HospitalController.list);
-router.get('/:id', authenticate, HospitalController.getById);
+router.get('/', optionalAuthenticate, HospitalController.list);
+router.get('/:id', optionalAuthenticate, HospitalController.getById);
 
 // Admin only management
 router.post(

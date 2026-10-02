@@ -6,9 +6,10 @@ import { ApiResponse } from '../responses/ApiResponse.js';
 
 export const globalRateLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
-  max: env.RATE_LIMIT_MAX_REQUESTS,
+  max: process.env.NODE_ENV === 'development' ? 50000 : env.RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'development',
   handler: (_req, res) => {
     return ApiResponse.error(
       res,
@@ -17,7 +18,7 @@ export const globalRateLimiter = rateLimit({
     );
   },
   store:
-    env.REDIS_ENABLED && redisClient && redisClient.status === 'ready'
+    env.REDIS_ENABLED && redisClient && redisClient.status === 'ready' && process.env.NODE_ENV !== 'development'
       ? new RedisStore({
           // @ts-expect-error - ioredis call signature compatibility
           sendCommand: (...args: string[]) => redisClient.call(...args),

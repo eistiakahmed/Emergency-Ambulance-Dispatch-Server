@@ -50,3 +50,44 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     next(error);
   }
 }
+
+export async function optionalAuthenticate(req: Request, res: Response, next: NextFunction) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      return next();
+    }
+
+    const decoded = verifyAccessToken(token);
+    const user = await prisma.user.findFirst({
+      where: {
+        id: decoded.id,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    if (user && user.isActive) {
+      req.user = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      };
+    }
+    next();
+  } catch {
+    // If token verification fails in optional mode, still proceed as unauthenticated
+    next();
+  }
+}
+
