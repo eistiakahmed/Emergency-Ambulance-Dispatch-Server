@@ -158,32 +158,62 @@ export class AuthService {
     };
   }
 
-  static async googleLogin(idToken: string, requestedRole: 'PATIENT' | 'DRIVER' = 'PATIENT') {
+  static async googleLogin(
+    credentials: { idToken?: string; accessToken?: string },
+    requestedRole: 'PATIENT' | 'DRIVER' = 'PATIENT'
+  ) {
     let email: string | undefined;
     let name: string | undefined;
     let googleId: string | undefined;
     let avatar: string | undefined;
 
+    const { idToken, accessToken } = credentials;
+
     try {
-      if (env.GOOGLE_CLIENT_ID && !env.GOOGLE_CLIENT_ID.includes('placeholder')) {
-        const ticket = await googleClient.verifyIdToken({
-          idToken,
-          audience: env.GOOGLE_CLIENT_ID,
+      if (accessToken) {
+        // Fetch verified user profile directly from Google UserInfo API using OAuth Access Token
+        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
-        const payload = ticket.getPayload();
-        email = payload?.email;
-        name = payload?.name;
-        googleId = payload?.sub;
-        avatar = payload?.picture;
+
+        if (!userInfoRes.ok) {
+          throw new UnauthorizedError('Failed to verify token with Google');
+        }
+
+        const profile = (await userInfoRes.json()) as {
+          sub?: string;
+          email?: string;
+          name?: string;
+          picture?: string;
+        };
+
+        email = profile.email;
+        name = profile.name;
+        googleId = profile.sub;
+        avatar = profile.picture;
+      } else if (idToken) {
+        if (env.GOOGLE_CLIENT_ID && !env.GOOGLE_CLIENT_ID.includes('placeholder')) {
+          const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: env.GOOGLE_CLIENT_ID,
+          });
+          const payload = ticket.getPayload();
+          email = payload?.email;
+          name = payload?.name;
+          googleId = payload?.sub;
+          avatar = payload?.picture;
+        } else {
+          // Mock payload verification for evaluation test tokens
+          const decodedMock = JSON.parse(
+            Buffer.from(idToken.split('.')[1] || '', 'base64').toString() || '{}'
+          );
+          email = decodedMock.email || `google.user.${Date.now()}@emergency.com`;
+          name = decodedMock.name || 'Google Verified User';
+          googleId = decodedMock.sub || `g_${Date.now()}`;
+          avatar = decodedMock.picture;
+        }
       } else {
-        // Mock payload verification for evaluation test tokens
-        const decodedMock = JSON.parse(
-          Buffer.from(idToken.split('.')[1] || '', 'base64').toString() || '{}'
-        );
-        email = decodedMock.email || `google.user.${Date.now()}@emergency.com`;
-        name = decodedMock.name || 'Google Verified User';
-        googleId = decodedMock.sub || `g_${Date.now()}`;
-        avatar = decodedMock.picture;
+        throw new BadRequestError('Either idToken or accessToken must be provided');
       }
     } catch {
       throw new UnauthorizedError('Invalid or expired Google OAuth token');

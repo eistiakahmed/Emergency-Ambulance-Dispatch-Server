@@ -34,8 +34,8 @@ export class AuthController {
 
   static async googleLogin(req: Request, res: Response, next: NextFunction) {
     try {
-      const { idToken, role } = req.body;
-      const result = await AuthService.googleLogin(idToken, role);
+      const { idToken, accessToken, role } = req.body;
+      const result = await AuthService.googleLogin({ idToken, accessToken }, role);
       res.cookie('refreshToken', result.tokens.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

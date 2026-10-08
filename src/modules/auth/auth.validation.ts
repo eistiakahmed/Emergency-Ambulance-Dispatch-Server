@@ -20,10 +20,21 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-export const googleAuthSchema = z.object({
-  idToken: z.string().min(10, 'Google ID Token is required'),
-  role: z.enum(['PATIENT', 'DRIVER']).optional().default('PATIENT'),
-});
+export const googleAuthSchema = z
+  .object({
+    idToken: z.string().optional(),
+    accessToken: z.string().optional(),
+    role: z
+      .preprocess(
+        (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+        z.enum(['PATIENT', 'DRIVER'])
+      )
+      .optional()
+      .default('PATIENT'),
+  })
+  .refine((data) => !!(data.idToken || data.accessToken), {
+    message: 'Either idToken or accessToken is required',
+  });
 
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().optional(),
