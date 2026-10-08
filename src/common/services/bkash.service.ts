@@ -80,12 +80,28 @@ export interface BkashCapturePaymentResponse {
 export class BkashService {
   private static REDIS_ID_TOKEN_KEY = 'bkash:auth:id_token';
   private static REDIS_REFRESH_TOKEN_KEY = 'bkash:auth:refresh_token';
+  private static inMemoryIdToken: string | null = null;
+  private static inMemoryIdTokenExpiresAt = 0;
+  private static inMemoryRefreshToken: string | null = null;
 
   /**
    * 1. Grant Token
    * POST {base_URL}/tokenized/checkout/token/grant
    */
   static async grantToken(): Promise<string> {
+    // Check in-memory token cache first
+    if (BkashService.inMemoryIdToken && Date.now() < BkashService.inMemoryIdTokenExpiresAt) {
+      return BkashService.inMemoryIdToken;
+    }
+
+    // Check Redis token cache
+    const cachedToken = await RedisService.get<string>(BkashService.REDIS_ID_TOKEN_KEY);
+    if (cachedToken) {
+      BkashService.inMemoryIdToken = cachedToken;
+      BkashService.inMemoryIdTokenExpiresAt = Date.now() + 300 * 1000;
+      return cachedToken;
+    }
+
     if (!env.BKASH_APP_KEY || !env.BKASH_APP_SECRET || !env.BKASH_USERNAME || !env.BKASH_PASSWORD) {
       throw new BadRequestError(
         'bKash credentials are not fully configured in environment variables'
@@ -122,9 +138,14 @@ export class BkashService {
     // Cache token with safe buffer (5 minutes before official expiration)
     const ttl = Math.max(300, expiresIn - 300);
 
+    BkashService.inMemoryIdToken = data.id_token;
+    BkashService.inMemoryIdTokenExpiresAt = Date.now() + ttl * 1000;
+    if (data.refresh_token) {
+      BkashService.inMemoryRefreshToken = data.refresh_token;
+    }
+
     await RedisService.set(BkashService.REDIS_ID_TOKEN_KEY, data.id_token, ttl);
     if (data.refresh_token) {
-      // Refresh token valid for 28 days or long TTL
       await RedisService.set(BkashService.REDIS_REFRESH_TOKEN_KEY, data.refresh_token, 86400 * 25);
     }
 
@@ -136,7 +157,9 @@ export class BkashService {
    * POST {base_URL}/tokenized/checkout/token/refresh
    */
   static async refreshToken(): Promise<string> {
-    const storedRefreshToken = await RedisService.get<string>(BkashService.REDIS_REFRESH_TOKEN_KEY);
+    const storedRefreshToken =
+      BkashService.inMemoryRefreshToken ||
+      (await RedisService.get<string>(BkashService.REDIS_REFRESH_TOKEN_KEY));
     if (!storedRefreshToken) {
       return BkashService.grantToken();
     }

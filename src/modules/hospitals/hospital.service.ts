@@ -27,15 +27,9 @@ export class HospitalService {
     const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(query);
     const search = query.search as string | undefined;
     const hasIcu =
-      query.hasIcu !== undefined
-        ? query.hasIcu === 'true' || query.hasIcu === true
-        : undefined;
-    const minIcuBeds = query.minIcuBeds
-      ? parseInt(query.minIcuBeds as string, 10)
-      : undefined;
-    const minBeds = query.minBeds
-      ? parseInt(query.minBeds as string, 10)
-      : undefined;
+      query.hasIcu !== undefined ? query.hasIcu === 'true' || query.hasIcu === true : undefined;
+    const minIcuBeds = query.minIcuBeds ? parseInt(query.minIcuBeds as string, 10) : undefined;
+    const minBeds = query.minBeds ? parseInt(query.minBeds as string, 10) : undefined;
 
     const where: any = {
       deletedAt: null,

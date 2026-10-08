@@ -18,7 +18,10 @@ export const globalRateLimiter = rateLimit({
     );
   },
   store:
-    env.REDIS_ENABLED && redisClient && redisClient.status === 'ready' && process.env.NODE_ENV !== 'development'
+    env.REDIS_ENABLED &&
+    redisClient &&
+    redisClient.status === 'ready' &&
+    process.env.NODE_ENV !== 'development'
       ? new RedisStore({
           // @ts-expect-error - ioredis call signature compatibility
           sendCommand: (...args: string[]) => redisClient.call(...args),

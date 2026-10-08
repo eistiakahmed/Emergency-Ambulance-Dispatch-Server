@@ -76,9 +76,7 @@ export class EmergencyService {
     const emergencies = rawEmergencies.map((e) => ({
       ...e,
       severityLevel: e.priority,
-      emergencyType: e.symptoms?.includes(':')
-        ? e.symptoms.split(':')[0].trim()
-        : 'GENERAL',
+      emergencyType: e.symptoms?.includes(':') ? e.symptoms.split(':')[0].trim() : 'GENERAL',
     }));
 
     return buildPaginatedResponse(emergencies, total, page, limit);

@@ -90,4 +90,3 @@ export async function optionalAuthenticate(req: Request, res: Response, next: Ne
     next();
   }
 }
-

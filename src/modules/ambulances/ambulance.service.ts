@@ -42,8 +42,8 @@ export class AmbulanceService {
       rawType === 'ALS'
         ? 'ADVANCED_LIFE_SUPPORT'
         : rawType === 'BLS'
-        ? 'BASIC_LIFE_SUPPORT'
-        : (rawType as any);
+          ? 'BASIC_LIFE_SUPPORT'
+          : (rawType as any);
 
     const isOperational =
       query.isOperational !== undefined ? query.isOperational === 'true' : undefined;
