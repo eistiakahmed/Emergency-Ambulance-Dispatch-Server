@@ -6,7 +6,6 @@ import { redisClient } from './config/redis.js';
 
 async function bootstrap() {
   await connectPrisma();
-  await verifyEmailTransporter();
 
   const server = app.listen(env.PORT, () => {
     console.log(`🚑 =======================================================`);
@@ -17,6 +16,9 @@ async function bootstrap() {
     console.log(`🚑 Interactive Docs:   http://localhost:${env.PORT}${env.API_PREFIX}/docs`);
     console.log(`🚑 =======================================================`);
   });
+
+  // Verify email transport in background without blocking server startup
+  verifyEmailTransporter().catch((e) => console.warn('Email transporter init warning:', e));
 
   // Graceful shutdown handling
   const shutdown = async (signal: string) => {
